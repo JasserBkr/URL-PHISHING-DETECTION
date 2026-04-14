@@ -1,0 +1,21 @@
+# Use the official Playwright image with Ubuntu Jammy
+FROM mcr.microsoft.com/playwright:v1.40.0-jammy
+
+# Set working directory
+WORKDIR /app
+
+# Install Python and pip
+RUN apt-get update && apt-get install -y python3-pip
+
+# Copy requirements and install Python dependencies
+COPY backend/requirements.txt .
+RUN pip3 install --no-cache-dir -r requirements.txt
+
+# Copy the extraction script
+COPY backend/extract_features.py .
+
+# Create output directory for screenshots
+RUN mkdir -p /app/output
+
+# Set the entrypoint to run your extraction script
+ENTRYPOINT ["python3", "extract_features.py"]

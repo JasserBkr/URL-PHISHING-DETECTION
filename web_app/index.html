@@ -1,0 +1,256 @@
+<!DOCTYPE html>
+
+<html class="dark" lang="en"><head>
+    <meta charset="utf-8"/>
+    <meta content="width=device-width, initial-scale=1.0" name="viewport"/>
+    <title>PHISH_INTEL_V1.0 // COMMAND_CENTER</title>
+    <script src="https://cdn.tailwindcss.com?plugins=forms,container-queries"></script>
+    <link href="https://fonts.googleapis.com/css2?family=Space+Grotesk:wght@300;400;500;600;700&amp;family=Inter:wght@300;400;600&amp;display=swap" rel="stylesheet"/>
+    <link href="https://fonts.googleapis.com/css2?family=Material+Symbols+Outlined:wght,FILL@100..700,0..1&amp;display=swap" rel="stylesheet"/>
+    <link href="https://fonts.googleapis.com/css2?family=Material+Symbols+Outlined:wght,FILL@100..700,0..1&amp;display=swap" rel="stylesheet"/>
+    <script id="tailwind-config">
+        tailwind.config = {
+            darkMode: "class",
+            theme: {
+                extend: {
+                    colors: {
+                        "tertiary-container": "#f5282b",
+                        "surface-container": "#1a1919",
+                        "error-dim": "#d73357",
+                        "tertiary": "#ff7166",
+                        "on-error-container": "#ffb2b9",
+                        "inverse-on-surface": "#565555",
+                        "on-surface": "#ffffff",
+                        "on-secondary-fixed-variant": "#5c5b5b",
+                        "surface-bright": "#2c2c2c",
+                        "on-tertiary-fixed-variant": "#7a0008",
+                        "tertiary-dim": "#e51a22",
+                        "surface-container-low": "#131313",
+                        "primary": "#ff8e7d",
+                        "on-surface-variant": "#adaaaa",
+                        "on-error": "#490013",
+                        "secondary-fixed": "#e5e2e1",
+                        "on-primary-fixed-variant": "#600000",
+                        "inverse-primary": "#c10000",
+                        "primary-fixed": "#ff7763",
+                        "inverse-surface": "#fcf9f8",
+                        "outline": "#767575",
+                        "surface-container-highest": "#262626",
+                        "on-primary": "#650000",
+                        "on-secondary": "#525151",
+                        "secondary": "#e5e2e1",
+                        "on-primary-fixed": "#000000",
+                        "on-secondary-container": "#d2d0cf",
+                        "error": "#ff6e84",
+                        "primary-container": "#ff7763",
+                        "surface-dim": "#0e0e0e",
+                        "surface-container-lowest": "#000000",
+                        "on-tertiary": "#4a0003",
+                        "secondary-dim": "#d6d4d3",
+                        "secondary-container": "#474746",
+                        "surface": "#0e0e0e",
+                        "primary-fixed-dim": "#ff5b47",
+                        "on-tertiary-fixed": "#3a0002",
+                        "on-background": "#ffffff",
+                        "surface-variant": "#262626",
+                        "error-container": "#a70138",
+                        "surface-tint": "#ff8e7d",
+                        "surface-container-high": "#201f1f",
+                        "secondary-fixed-dim": "#d6d4d3",
+                        "primary-dim": "#ea0703",
+                        "background": "#0e0e0e",
+                        "on-secondary-fixed": "#403f3f",
+                        "on-primary-container": "#4f0000",
+                        "tertiary-fixed": "#ff9287",
+                        "on-tertiary-container": "#000000",
+                        "tertiary-fixed-dim": "#ff7b70",
+                        "outline-variant": "#484847"
+                    },
+                    fontFamily: {
+                        "headline": ["Space Grotesk"],
+                        "body": ["Inter"],
+                        "label": ["Space Grotesk"]
+                    },
+                    borderRadius: {"DEFAULT": "0rem", "lg": "0rem", "xl": "0rem", "full": "9999px"},
+                },
+            },
+       }
+    </script>
+    <style>
+        .material-symbols-outlined {
+            font-variation-settings: 'FILL' 0, 'wght' 400, 'GRAD' 0, 'opsz' 24;
+            vertical-align: middle;
+        }
+        .glow-red {
+            text-shadow: 0 0 10px rgba(234, 7, 3, 0.6);
+        }
+        .bg-scan-gradient {
+            background: linear-gradient(45deg, #ea0703 0%, #ff8e7d 100%);
+        }
+        ::-webkit-scrollbar {
+            width: 4px;
+        }
+        ::-webkit-scrollbar-track {
+            background: #0e0e0e;
+        }
+        ::-webkit-scrollbar-thumb {
+            background: #ea0703;
+        }
+        #progressCircle{
+            transition: stroke-dashoffset 1s ease;
+        }
+        #error{
+            color: #ea0703;
+            text-align: center;
+        }
+
+    </style>
+    </head>
+    <body class="bg-surface text-on-surface font-body overflow-x-hidden selection:bg-primary selection:text-black">
+        <!-- TopNavBar -->
+        <header class="fixed top-0 w-full z-50 flex justify-between items-center px-6 py-3 bg-[#1a1919] border-b border-[#ea0703]/20 shadow-[0_4px_20px_rgba(234,7,3,0.1)]">
+            <div class="text-2xl font-black tracking-tighter text-[#ea0703] drop-shadow-[0_0_8px_rgba(245,40,43,0.6)] font-['Space_Grotesk']">
+                PhishOps
+            </div>
+            <nav class="hidden md:flex space-x-8 font-['Space_Grotesk'] uppercase tracking-widest text-sm"><a class="text-[#ff8e7d] border-b-2 border-[#ea0703] pb-1 duration-75 ease-in active:scale-95" href="#">DASHBOARD</a></nav>
+        </header>
+        <!-- SideNavBar -->
+        <aside class="fixed left-0 top-0 h-full flex flex-col pt-20 bg-[#0e0e0e] border-r border-[#ea0703]/10 w-64 hidden xl:flex z-40">
+            <nav class="flex-1">
+                <a class="flex items-center px-6 py-3 space-x-3 text-[#adaaaa] hover:bg-[#1a1919] font-['Space_Grotesk'] font-bold text-xs uppercase tracking-wider" href="/static/threatmap.html">
+                    <span class="material-symbols-outlined text-sm">public</span>
+                    <span>THREAT_MAP</span>
+                </a>
+                <a class="flex items-center px-6 py-3 space-x-3 bg-[#ea0703] text-black font-black font-['Space_Grotesk'] text-xs uppercase tracking-wider" href="#">
+                    <span class="material-symbols-outlined text-sm">biotech</span>
+                    <span>PAYLOAD_ANALYSIS</span>
+                </a>
+                <a id="dnsReconLink" class="flex items-center px-6 py-3 space-x-3 text-white/30 pointer-events-none cursor-not-allowed font-['Space_Grotesk'] font-bold text-xs uppercase tracking-wider transition-all duration-300" href="/static/dns_recon.html">
+                    <span class="material-symbols-outlined text-sm">lan</span>
+                    <span>DNS_RECON</span>
+                </a>
+            </nav>
+        </aside>
+        <!-- Main Content -->
+        <main class="pt-20 xl:pl-64 pb-12 min-h-screen">
+            <div class="max-w-7xl mx-auto px-6 py-8">
+            <!-- URL Injector Header -->
+            <section class="mb-10">
+                <div class="flex items-center justify-between mb-4">
+                    <h1 class="font-headline text-2xl font-black text-on-surface tracking-tighter uppercase">URL_<span class="text-primary-dim">INJECTOR</span></h1>
+                </div>
+                <div class="bg-surface-container-lowest border-b border-primary-dim flex items-stretch overflow-hidden group">
+                    <div class="bg-surface-container-high px-4 flex items-center border-r border-primary-dim/20">
+                        <span class="material-symbols-outlined text-primary-dim">language</span>
+                    </div>
+                    <input id="url" class="flex-1 bg-transparent border-none focus:ring-0 text-primary font-headline tracking-widest py-4 px-6 placeholder:text-on-surface-variant/30" placeholder="HTTPS://TARGET-ANALYSIS.SECURE/PAYLOAD_PATH" type="text"/>
+                    <button class="bg-scan-gradient hover:brightness-110 active:scale-95 transition-all text-black font-black font-headline px-10 flex items-center gap-2" onclick="scan()">SCAN <span class="material-symbols-outlined" >bolt</span></button>
+                </div>
+
+                <div id="error" class="text-red-500 font-headline mt-4"></div>
+
+                <div id="loadingContainer" class="hidden w-full max-w-md mx-auto h-2 bg-gray-700 rounded-full mt-4 overflow-hidden">
+                    <div id="loadingBar" class="h-full bg-green-500 transition-all duration-200 ease-out" style="width: 0%;"></div>
+                </div>
+            </section>
+            <!-- Bento Grid Layout -->
+            <div class="grid grid-cols-1 md:grid-cols-12 gap-6">
+                <!-- Phishing Prediction Gauge -->
+                <div class="md:col-span-4 bg-surface-container p-6 border-l-4 border-tertiary-container relative overflow-hidden">
+                    <div class="absolute -right-8 -top-8 w-32 h-32 bg-primary-dim/5 blur-3xl rounded-full"></div>
+                    <div class="flex justify-between items-start mb-8">
+                        <h3 class="font-headline text-xs font-bold text-on-surface-variant tracking-widest">PHISHING_PREDICTION</h3>
+                        <span class="material-symbols-outlined text-primary-dim">radar</span>
+                    </div>
+                    <div class="flex flex-col items-center justify-center py-6">
+                        <div class="relative w-48 h-48 flex items-center justify-center">
+                        <svg class="w-full h-full -rotate-90">
+                            <circle class="text-surface-container-highest" cx="96" cy="96" fill="transparent" r="88" stroke="currentColor" stroke-width="8"></circle>
+                            <circle id="progressCircle" class="text-primary-dim drop-shadow-[0_0_8px_#ea0703]" cx="96" cy="96" fill="transparent" r="88" stroke="currentColor" stroke-dasharray="552.92" stroke-dashoffset="552.92" stroke-width="8"></circle>
+                        </svg>
+                        <div class="absolute inset-0 flex flex-col items-center justify-center">
+                            <span id="percentText" class="text-5xl font-black font-headline text-primary-dim glow-red tracking-tighter">0%</span>
+                            <span id="statusText" class="text-[10px] font-bold text-primary font-headline mt-1 tracking-widest">MALICIOUS</span>
+                        </div>
+                    </div>
+                </div>
+            </div>
+            <!-- Threat Vector Analysis -->
+            <div class="md:col-span-8 bg-surface-container p-6 flex flex-col">
+                <div class="flex justify-between items-center mb-6">
+                    <h3 class="font-headline text-xs font-bold text-on-surface-variant tracking-widest">THREAT_VECTOR_ANALYSIS</h3>
+                    <div class="flex gap-2">
+                        <div class="w-2 h-2 bg-primary-dim animate-pulse"></div>
+                        <div class="w-2 h-2 bg-primary-dim"></div>
+                        <div class="w-2 h-2 bg-primary-dim/30"></div>
+                    </div>
+                </div>
+                <div class="space-y-6 flex-1">
+                    <div>
+                        <div class="flex justify-between text-[10px] font-headline font-bold text-on-surface mb-2">
+                            <span id ="feature1" class="tracking-widest">_____</span>
+                            <span id="prob_of_feat_1" class="text-primary-dim">__</span>
+                        </div>
+                        <div id="hole_feature_1_bar" class="h-2 bg-surface-container-highest relative">
+                            <div id="feature_1_bar" class="absolute left-0 top-0 h-full w-[0%] bg-primary-dim shadow-[0_0_10px_#ea0703] transition-all duration-500 ease-out"></div>
+                        </div>
+                    </div>
+                    <div>
+                        <div class="flex justify-between text-[10px] font-headline font-bold text-on-surface mb-2">
+                            <span id="feature2" class="tracking-widest">_____</span>
+                            <span id="prob_of_feat_2" class="text-primary-dim">__</span>
+                        </div>
+                        <div class="h-2 bg-surface-container-highest relative">
+                            <div id="feature_2_bar" class="absolute left-0 top-0 h-full w-[0%] bg-primary-dim shadow-[0_0_10px_#ea0703] transition-all duration-500 ease-out"></div>
+                        </div>
+                    </div>
+                    <div>
+                        <div class="flex justify-between text-[10px] font-headline font-bold text-on-surface mb-2">
+                            <span id="feature3" class="tracking-widest">_____</span>
+                            <span id="prob_of_feat_3" class="text-primary">__</span>
+                        </div>
+                        <div class="h-2 bg-surface-container-highest relative">
+                            <div id="feature_3_bar" class="absolute left-0 top-0 h-full w-[0%] bg-primary shadow-[0_0_10px_#ff8e7d] transition-all duration-500 ease-out"></div>
+                        </div>
+                    </div>
+                    <div>
+                        <div class="flex justify-between text-[10px] font-headline font-bold text-on-surface mb-2">
+                            <span id="feature4" class="tracking-widest">_____</span>
+                            <span id="prob_of_feat_4" class="text-primary-dim">__</span>
+                        </div>
+                        <div class="h-2 bg-surface-container-highest relative">
+                            <div id="feature_4_bar" class="absolute left-0 top-0 h-full w-[0%] bg-primary-dim shadow-[0_0_10px_#ea0703] transition-all duration-500 ease-out"></div>
+                        </div>
+                    </div>
+                </div>
+            </div>
+            <!-- Screenshot Capture -->
+            <div class="md:col-span-7 bg-surface-container overflow-hidden group relative">
+                <div class="absolute top-4 left-4 z-10 bg-black/60 backdrop-blur-md px-3 py-1 border border-primary-dim/40">
+                    <span class="font-headline text-[10px] font-black text-primary-dim tracking-widest flex items-center gap-2">
+                        <span class="w-1.5 h-1.5 bg-primary-dim rounded-full animate-pulse"></span>SCREENSHOT_CAPTURE
+                    </span>
+                </div>
+                <div class="w-full h-80 bg-surface-container-lowest flex items-center justify-center relative">
+                    <img id="forensicScreenshot" class="w-full h-full object-cover grayscale group-hover:grayscale-0 transition-all duration-700" src="/static/placeholder.png"/>
+                    <div class="absolute inset-0 bg-gradient-to-t from-surface-container via-transparent to-transparent pointer-events-none"></div>
+                    <!--<div class="absolute inset-0 flex items-center justify-center opacity-0 group-hover:opacity-100 transition-opacity pointer-events-none group-hover:pointer-events-auto">
+                        <button class="bg-black/80 border border-primary-dim text-primary-dim font-headline px-4 py-2 text-xs uppercase font-bold backdrop-blur-md" onclick="open_img()">Open Forensic View</button>
+                    </div>-->
+                </div>
+            </div>
+            <!-- Live Feed -->
+            <div class="md:col-span-5 bg-surface-container-high flex flex-col border border-white/5">
+                <div class="p-4 border-b border-white/5 flex items-center justify-between">
+                    <h3 class="font-headline text-xs font-bold text-on-surface-variant tracking-widest">LIVE_INTEL_FEED</h3>
+                    <span class="material-symbols-outlined text-[16px] text-primary animate-spin">sync</span>
+                </div>
+                <div id="liveFeed" class="flex-1 overflow-y-auto max-h-[320px]">
+                    <div class="p-4 border-b border-white/5 hover:bg-surface-bright transition-colors cursor-pointer"></div>
+                </div>
+            </div>
+
+        </main>
+        <script src="/static/script.js"></script>
+    </body>
+</html>
