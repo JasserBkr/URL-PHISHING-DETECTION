@@ -1,0 +1,208 @@
+<!DOCTYPE html>
+<html class="dark" lang="en">
+<head>
+    <meta charset="utf-8"/>
+    <meta content="width=device-width, initial-scale=1.0" name="viewport"/>
+    <title>PHISH_INTEL_V1.0 // DNS_RECON</title>
+    <script src="https://cdn.tailwindcss.com?plugins=forms,container-queries"></script>
+    <link href="https://fonts.googleapis.com/css2?family=Space+Grotesk:wght@300;400;500;600;700&family=Inter:wght@300;400;600&display=swap" rel="stylesheet"/>
+    <link href="https://fonts.googleapis.com/css2?family=Material+Symbols+Outlined:wght,FILL@100..700,0..1&display=swap" rel="stylesheet"/>
+    <script id="tailwind-config">
+        tailwind.config = {
+            darkMode: "class",
+            theme: {
+                extend: {
+                    colors: {
+                        "primary": "#ff8e7d",
+                        "primary-dim": "#ea0703",
+                        "surface": "#0e0e0e",
+                        "on-surface": "#ffffff",
+                        "on-surface-variant": "#adaaaa",
+                    },
+                    fontFamily: {
+                        "headline": ["Space Grotesk"],
+                        "body": ["Inter"],
+                    }
+                }
+            }
+        }
+    </script>
+    <style>
+        .material-symbols-outlined {
+            font-variation-settings: 'FILL' 0, 'wght' 400, 'GRAD' 0, 'opsz' 24;
+            vertical-align: middle;
+        }
+        ::-webkit-scrollbar { width: 4px; }
+        ::-webkit-scrollbar-track { background: #0e0e0e; }
+        ::-webkit-scrollbar-thumb { background: #ea0703; }
+    </style>
+</head>
+<body class="bg-surface text-on-surface font-body overflow-x-hidden selection:bg-primary selection:text-black">
+    
+    <header class="fixed top-0 w-full z-50 flex justify-between items-center px-6 py-3 bg-[#1a1919] border-b border-[#ea0703]/20 shadow-[0_4px_20px_rgba(234,7,3,0.1)]">
+        <div class="text-2xl font-black tracking-tighter text-[#ea0703] drop-shadow-[0_0_8px_rgba(245,40,43,0.6)] font-['Space_Grotesk']">
+            PhishOps
+        </div>
+        <nav class="hidden md:flex space-x-8 font-['Space_Grotesk'] uppercase tracking-widest text-sm">
+            <a class="text-[#ff8e7d] border-b-2 border-[#ea0703] pb-1 duration-75 ease-in active:scale-95" href="#">DASHBOARD</a>
+        </nav>
+    </header>
+
+    <aside class="fixed left-0 top-0 h-full flex flex-col pt-20 bg-[#0e0e0e] border-r border-[#ea0703]/10 w-64 hidden xl:flex z-40">
+        <nav class="flex-1">
+            <a class="flex items-center px-6 py-3 space-x-3 text-[#adaaaa] hover:bg-[#1a1919] font-['Space_Grotesk'] font-bold text-xs uppercase tracking-wider" href="/static/threatmap.html">
+                <span class="material-symbols-outlined text-sm">public</span>
+                <span>THREAT_MAP</span>
+            </a>
+            <a class="flex items-center px-6 py-3 space-x-3 text-[#adaaaa] hover:bg-[#1a1919] font-['Space_Grotesk'] font-bold text-xs uppercase tracking-wider" href="index.html">
+                <span class="material-symbols-outlined text-sm">biotech</span>
+                <span>PAYLOAD_ANALYSIS</span>
+            </a>
+            <a class="flex items-center px-6 py-3 space-x-3 bg-[#ea0703] text-black font-black font-['Space_Grotesk'] text-xs uppercase tracking-wider" href="#">
+                <span class="material-symbols-outlined text-sm">lan</span>
+                <span>DNS_RECON</span>
+            </a>
+        </nav>
+    </aside>
+
+    <main class="pt-20 xl:pl-64 pb-12 min-h-screen">
+        <div class="max-w-full px-6 py-8 h-full">
+            <section class="mb-10">
+                <div class="flex items-center justify-between mb-4">
+                    <h1 class="font-headline text-2xl font-black text-on-surface tracking-tighter uppercase">DNS_<span class="text-primary-dim">RECON</span></h1>
+                </div>
+            </section>
+
+            <div id="dns-tables-container" class="space-y-12 w-full"></div>
+        </div>
+    </main>
+           <!--- <main class="pt-20 xl:pl-64 pb-12 min-h-screen">
+                <div class="max-w-full px-6 py-8 h-full">
+                    <section class="mb-10">
+                        <div class="flex items-center justify-between mb-4">
+                            <h1 class="font-headline text-2xl font-black text-on-surface tracking-tighter uppercase">
+                                DNS_<span class="text-primary-dim">RECON</span>
+                            </h1>
+                        </div>
+                    </section>
+
+                    <div id="dns-tables-container" class="space-y-12 w-full"></div>
+                </div>
+            </main>-->
+    <script>
+    function renderDNSTables() {
+        const rawData = localStorage.getItem('dns_results');
+        const container = document.getElementById('dns-tables-container');
+        
+        if (!rawData) {
+            container.innerHTML = `<p class="text-on-surface-variant font-headline text-xs tracking-widest uppercase opacity-50">No scan data found. Please run a scan from the Payload Analysis dashboard.</p>`;
+            return;
+        }
+
+        const data = JSON.parse(rawData);
+        container.innerHTML = ""; // Clear container first
+        
+        const ipRegex = /^(?:[0-9]{1,3}\.){3}[0-9]{1,3}$/;
+        const ipEntries = Object.entries(data).filter(([key]) => ipRegex.test(key));
+        const recordEntries = Object.entries(data).filter(([key]) => !ipRegex.test(key));
+
+        // 1. IP Infrastructure Table
+        if (ipEntries.length > 0) {
+            let ipHtml = `
+                <div class="bg-[#1a1919] border border-white/5 p-6 w-full max-w-5xl">
+                    <h2 class="font-headline text-sm font-bold text-primary-dim tracking-widest mb-4 uppercase">IP_INFRASTRUCTURE</h2>
+                    <div class="overflow-x-auto">
+                        <table class="w-full text-left font-body text-xs">
+                            <thead>
+                                <tr class="border-b border-white/10 text-on-surface-variant uppercase tracking-tighter">
+                                    <th class="py-3 px-4">IP Address</th>
+                                    <th class="py-3 px-4">Reports</th>
+                                    <th class="py-3 px-4">ISP</th>
+                                    <th class="py-3 px-4">Country</th>
+                                    <th class="py-3 px-4">Usage</th>
+                                </tr>
+                            </thead>
+                            <tbody class="text-on-surface">`;
+            
+            ipEntries.forEach(([ip, values]) => {
+                ipHtml += `
+                    <tr class="border-b border-white/5 hover:bg-white/5 transition-colors">
+                        <td class="py-4 px-4 font-bold text-primary">${ip}</td>
+                        <td class="py-4 px-4">${values[0] || '---'}</td>
+                        <td class="py-4 px-4">${values[1] || 'Unknown'}</td>
+                        <td class="py-4 px-4">${values[2] || '---'}</td>
+                        <td class="py-4 px-4">${values[3] || '---'}</td>
+                    </tr>`;
+            });
+            ipHtml += `</tbody></table></div></div>`;
+            container.insertAdjacentHTML('beforeend', ipHtml);
+        }
+
+        // 2. Domain Records Table
+        if (recordEntries.length > 0) {
+            let recordHtml = `
+                <div class="bg-[#1a1919] border border-white/5 p-6 w-full max-w-5xl">
+                    <h2 class="font-headline text-sm font-bold text-primary-dim tracking-widest mb-4 uppercase">DOMAIN_RECORDS</h2>
+                    <div class="overflow-x-auto">
+                        <table class="w-full text-left font-body text-xs">
+                            <thead>
+                                <tr class="border-b border-white/10 text-on-surface-variant uppercase tracking-tighter">
+                                    <th class="py-3 px-4">Record Type</th>
+                                    <th class="py-3 px-4">Value(s)</th>
+                                </tr>
+                            </thead>
+                            <tbody class="text-on-surface">`;
+
+            recordEntries.forEach(([key, value]) => {
+                const displayValue = Array.isArray(value) ? value.join('<br>') : value;
+                recordHtml += `
+                    <tr class="border-b border-white/5 hover:bg-white/5 transition-colors">
+                        <td class="py-4 px-4 font-bold uppercase text-primary-dim">${key.replace('_', ' ')}</td>
+                        <td class="py-4 px-4 leading-relaxed">${displayValue}</td>
+                    </tr>`;
+            });
+            recordHtml += `</tbody></table></div></div>`;
+            container.insertAdjacentHTML('beforeend', recordHtml);
+        }
+    }
+
+    // Run immediately on page load
+    renderDNSTables();
+
+    // Re-render when navigating back/forward
+    window.addEventListener('pageshow', renderDNSTables);
+
+    // KEY FIX: re-render whenever script.js writes new dns_results to localStorage.
+    // The 'storage' event fires on all OTHER open pages when localStorage changes.
+    window.addEventListener('storage', function(e) {
+        if (e.key === 'dns_results') {
+            showUpdateBanner();
+            renderDNSTables();
+        }
+    });
+
+    // Expose globally so script.js can trigger a refresh directly
+    // (storage event does NOT fire on the same page that wrote the value)
+    window.refreshDnsRecon = function() {
+        showUpdateBanner();
+        renderDNSTables();
+    };
+
+    function showUpdateBanner() {
+        let banner = document.getElementById('update-banner');
+        if (!banner) {
+            banner = document.createElement('div');
+            banner.id = 'update-banner';
+            banner.className = 'fixed top-16 right-6 z-50 bg-[#ea0703] text-black font-headline font-bold text-xs px-4 py-2 tracking-widest uppercase shadow-lg';
+            banner.textContent = 'NEW SCAN DATA LOADED';
+            document.body.appendChild(banner);
+        }
+        banner.style.display = 'block';
+        clearTimeout(banner._timeout);
+        banner._timeout = setTimeout(() => { banner.style.display = 'none'; }, 3000);
+    }
+    </script>
+
+
+</body>
+</html>

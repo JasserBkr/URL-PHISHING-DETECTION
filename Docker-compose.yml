@@ -1,0 +1,30 @@
+version: "3.9"
+
+services:
+
+  app:
+    build:
+      context: .
+      dockerfile: Dockerfile.app
+    container_name: phishing_app
+    ports:
+    "8000:8000"
+  
+
+  volumes:
+    ./temp_scans:/app/temp_scans
+    ./web_app/screenshots:/app/web_app/screenshots
+environment:
+  PLAYWRIGHT_SERVICE_URL=http://playwright:3000/
+depends_on:
+  playwright
+restart: always
+
+playwright:
+    build:
+      context: .
+      dockerfile: Dockerfile.playwright
+    container_name: playwright_service
+    expose:
+      "3000"
+    restart: always

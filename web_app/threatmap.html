@@ -1,0 +1,743 @@
+<!DOCTYPE html>
+<html class="dark" lang="en">
+<head>
+<meta charset="utf-8"/>
+<meta content="width=device-width, initial-scale=1.0" name="viewport"/>
+<title>PHISHOPS // THREAT GLOBE</title>
+<script src="https://cdn.tailwindcss.com?plugins=forms,container-queries"></script>
+<script src="https://cdnjs.cloudflare.com/ajax/libs/three.js/r128/three.min.js"></script>
+<link href="https://fonts.googleapis.com/css2?family=Space+Grotesk:wght@300;400;500;600;700&family=Share+Tech+Mono&display=swap" rel="stylesheet"/>
+<link href="https://fonts.googleapis.com/css2?family=Material+Symbols+Outlined:wght,FILL@100..700,0..1&display=swap" rel="stylesheet"/>
+<script>
+  tailwind.config = {
+    darkMode:"class",
+    theme:{ extend:{
+      colors: {
+        "primary-dim": "#ea0703",
+        "primary": "#ff8e7d",
+        "surface-container": "#1a1919"
+      },
+      fontFamily:{ headline:["Space Grotesk"] },
+      borderRadius:{ DEFAULT:"0rem" }
+    }}
+  }
+</script>
+<style>
+  html,body{ height:100%; margin:0; padding:0; overflow:hidden; background:#0e0e0e; }
+  .material-symbols-outlined{ font-variation-settings:'FILL' 0,'wght' 400,'GRAD' 0,'opsz' 24; vertical-align:middle; }
+  ::-webkit-scrollbar{ width:3px; }
+  ::-webkit-scrollbar-track{ background:#0e0e0e; }
+  ::-webkit-scrollbar-thumb{ background:#ea0703; }
+
+  #globe-widget{ position:relative; width:100%; height:100%; overflow:hidden;
+    background:radial-gradient(ellipse at 50% 50%,#1a1919 0%,#0e0e0e 70%); }
+  #globe-canvas{ display:block; width:100%; height:100%; cursor:grab; }
+  #globe-canvas:active{ cursor:grabbing; }
+
+  .g-feed-item{ padding:8px 12px; border-bottom:1px solid rgba(234,7,3,0.08); cursor:pointer; transition:background .15s; }
+  .g-feed-item:hover{ background:rgba(234,7,3,0.04); }
+  .g-feed-item.active{ background:rgba(234,7,3,0.08); border-left:2px solid #ea0703; }
+  .g-feed-url{ font-family:'Share Tech Mono',monospace; font-size:10px; color:#fff; white-space:nowrap; overflow:hidden; text-overflow:ellipsis; margin-bottom:3px; }
+  .g-feed-meta{ display:flex; align-items:center; gap:6px; font-family:'Share Tech Mono',monospace; font-size:9px; color:#adaaaa; }
+
+  .rbadge{ padding:1px 5px; font-size:8px; font-weight:700; text-transform:uppercase; }
+  .rh{ background:rgba(255,37,37,.15); color:#ff2525; border:1px solid rgba(255,37,37,.3); }
+  .rm{ background:rgba(255,140,0,.15);  color:#ff8c00; border:1px solid rgba(255,140,0,.3); }
+  .rl{ background:rgba(0,230,118,.1);   color:#00e676; border:1px solid rgba(0,230,118,.25); }
+
+  @keyframes liveBlink{ 0%,100%{opacity:1} 50%{opacity:.2} }
+  #g-analyze-btn{ transition:all .2s; }
+  #g-analyze-btn:disabled{ opacity:.4; cursor:not-allowed; }
+  .score-row{ display:flex; justify-content:space-between; align-items:center; margin-bottom:5px; }
+  .score-pct{ font-family:'Share Tech Mono',monospace; font-size:11px; font-weight:700; }
+
+  #toast{
+    position:fixed; bottom:24px; left:50%; transform:translateX(-50%);
+    font-family:'Share Tech Mono',monospace; font-size:11px;
+    background:rgba(26,25,25,0.96); border:1px solid rgba(234,7,3,0.4);
+    color:#ff2525; padding:8px 18px; z-index:9999;
+    opacity:0; transition:opacity .3s; pointer-events:none; white-space:nowrap;
+  }
+  #toast.show{ opacity:1; }
+
+  #loading-screen{
+    position:fixed; inset:0; background:#0e0e0e; z-index:9998;
+    display:flex; flex-direction:column; align-items:center; justify-content:center;
+    font-family:'Share Tech Mono',monospace; color:#ea0703; gap:16px;
+    transition:opacity .6s;
+  }
+  #loading-screen.fade{ opacity:0; pointer-events:none; }
+  #loading-bar-track{ width:240px; height:2px; background:rgba(234,7,3,0.1); }
+  #loading-bar-fill{ height:100%; background:#ea0703; width:0%; transition:width .3s; box-shadow:0 0 8px #ea0703; }
+  #loading-label{ font-size:10px; letter-spacing:.12em; color:#ea0703; opacity:.7; }
+</style>
+</head>
+<body class="text-white">
+
+<div id="loading-screen">
+  <div style="font-size:13px;letter-spacing:.2em;color:#ea0703">PHISHOPS // INITIALIZING</div>
+  <div id="loading-bar-track"><div id="loading-bar-fill"></div></div>
+  <div id="loading-label">Loading world geometry...</div>
+</div>
+
+<div id="toast"></div>
+
+<main class="h-screen w-screen flex flex-col" style="visibility:hidden" id="app">
+
+  <div class="flex items-center justify-between px-4 py-2 border-b border-[#ea0703]/10 bg-[#1a1919] shrink-0">
+    <div class="flex items-center gap-3">
+      <span class="material-symbols-outlined text-[#ea0703] text-sm">radar</span>
+      <span class="font-['Space_Grotesk'] font-black text-xs tracking-widest text-[#ea0703]">PHISHOPS // THREAT_GLOBE</span>
+      <span class="font-['Share_Tech_Mono'] text-[9px] tracking-widest text-[#adaaaa]" id="g-clock">--:--:-- UTC</span>
+    </div>
+    <div class="flex items-center gap-5">
+      <span class="font-['Share_Tech_Mono'] text-[10px]"><span class="text-[#ff2525]" id="g-cnt-h">0</span> <span class="text-[#adaaaa]">HIGH</span></span>
+      <span class="font-['Share_Tech_Mono'] text-[10px]"><span class="text-[#ff8c00]" id="g-cnt-m">0</span> <span class="text-[#adaaaa]">MED</span></span>
+      <span class="font-['Share_Tech_Mono'] text-[10px]"><span class="text-[#00e676]" id="g-cnt-l">0</span> <span class="text-[#adaaaa]">SAFE</span></span>
+      <span class="font-['Share_Tech_Mono'] text-[10px] text-[#adaaaa]" id="g-total">0 events</span>
+      <div class="flex items-center gap-1.5">
+        <div class="w-[6px] h-[6px] rounded-full bg-[#ea0703]" style="box-shadow:0 0 8px #ea0703;animation:liveBlink 1.8s infinite"></div>
+        <span class="font-['Space_Grotesk'] text-[9px] text-[#ea0703] tracking-widest">LIVE</span>
+      </div>
+    </div>
+  </div>
+
+  <div class="flex flex-1 overflow-hidden">
+
+    <div class="flex flex-col w-64 shrink-0 border-r border-[#ea0703]/10 bg-[#1a1919]">
+      <div class="p-3 border-b border-[#ea0703]/10">
+        <input id="g-url-input" type="text" placeholder="https://suspicious-site.xyz"
+          class="w-full bg-transparent border border-[#ea0703]/20 text-white font-['Share_Tech_Mono'] text-[10px] px-2 py-1.5 outline-none mb-2 focus:border-[#ea0703]/60 transition-colors"/>
+        <button id="g-analyze-btn" onclick="gAnalyze()"
+          class="w-full border border-[#ea0703] text-[#ea0703] font-['Space_Grotesk'] font-black text-[9px] py-1.5 hover:bg-[#ea0703] hover:text-black transition-all tracking-widest">
+          ⚡ RUN ANALYSIS
+        </button>
+      </div>
+      <div class="font-['Space_Grotesk'] text-[8px] tracking-widest text-[#adaaaa] uppercase px-3 py-2 border-b border-[#ea0703]/10">Threat Feed</div>
+      <div id="g-feed" class="flex-1 overflow-y-auto"></div>
+    </div>
+
+    <div id="globe-widget" class="flex-1 relative">
+      <canvas id="globe-canvas"></canvas>
+      <div style="position:absolute;bottom:14px;left:50%;transform:translateX(-50%);font-family:'Share Tech Mono',monospace;font-size:9px;color:#555;pointer-events:none;letter-spacing:.08em">
+        drag · scroll to zoom
+      </div>
+    </div>
+
+    <div class="flex flex-col w-64 shrink-0 border-l border-[#ea0703]/10 bg-[#1a1919]">
+      <div class="font-['Space_Grotesk'] text-[8px] tracking-widest text-[#adaaaa] uppercase px-3 py-2 border-b border-[#ea0703]/10">EVENT_DETAIL</div>
+      <div id="g-det-empty" class="flex-1 flex flex-col items-center justify-center text-[#555] font-['Share_Tech_Mono'] text-[10px] text-center px-4 gap-3">
+        <span style="font-size:28px;opacity:.12">◎</span>
+        Click a marker or<br/>feed item to inspect
+      </div>
+      <div id="g-det-card" class="hidden p-3 overflow-y-auto flex-1 text-[9px] font-['Share_Tech_Mono']"></div>
+      <div id="g-score-sec" class="hidden px-3 pb-3 border-t border-[#ea0703]/10 pt-3">
+        <div class="score-row">
+          <span class="font-['Space_Grotesk'] text-[8px] tracking-widest text-[#adaaaa] uppercase">Phishing Score</span>
+          <span class="score-pct" id="g-score-pct">—</span>
+        </div>
+        <div class="h-[3px] bg-[#111] w-full overflow-hidden">
+          <div id="g-score-fill" class="h-full transition-all duration-700"></div>
+        </div>
+      </div>
+      <div class="px-3 py-3 border-t border-[#ea0703]/10">
+        <div class="font-['Space_Grotesk'] text-[8px] tracking-widest text-[#adaaaa] uppercase mb-2">Risk Level</div>
+        <div class="flex flex-col gap-1.5">
+          <div class="flex items-center gap-2 font-['Share_Tech_Mono'] text-[9px] text-[#adaaaa]">
+            <div class="w-2 h-2 rounded-full bg-[#ff2525]" style="box-shadow:0 0 5px #ff2525"></div>High — phishing
+          </div>
+          <div class="flex items-center gap-2 font-['Share_Tech_Mono'] text-[9px] text-[#adaaaa]">
+            <div class="w-2 h-2 rounded-full bg-[#ff8c00]" style="box-shadow:0 0 5px #ff8c00"></div>Medium — suspicious
+          </div>
+          <div class="flex items-center gap-2 font-['Share_Tech_Mono'] text-[9px] text-[#adaaaa]">
+            <div class="w-2 h-2 rounded-full bg-[#00e676]" style="box-shadow:0 0 5px #00e676"></div>Low — likely safe
+          </div>
+        </div>
+      </div>
+    </div>
+
+  </div>
+</main>
+
+<script>
+(function(){
+
+// ═══════════════════════════════════════════════════════════════
+// CONFIG
+// ═══════════════════════════════════════════════════════════════
+const BACKEND_URL = 'http://127.0.0.1:8000/analyze';
+const ORIGIN      = { lat:36.8, lon:10.18 };   // Tunis — your server location
+const RISK_COL    = { high:'#ff2525', medium:'#ff8c00', low:'#00e676' };
+const R           = 100;
+
+// ═══════════════════════════════════════════════════════════════
+// LOADING PROGRESS
+// ═══════════════════════════════════════════════════════════════
+function setProgress(pct, label){
+  document.getElementById('loading-bar-fill').style.width = pct+'%';
+  document.getElementById('loading-label').textContent = label;
+}
+
+// ═══════════════════════════════════════════════════════════════
+// THREE.JS SETUP
+// ═══════════════════════════════════════════════════════════════
+const canvas   = document.getElementById('globe-canvas');
+const widget   = document.getElementById('globe-widget');
+const renderer = new THREE.WebGLRenderer({ canvas, antialias:true, alpha:true });
+renderer.setPixelRatio(Math.min(window.devicePixelRatio,2));
+
+const scene  = new THREE.Scene();
+const camera = new THREE.PerspectiveCamera(42,1,0.1,2000);
+camera.position.z = 265;
+
+scene.add(new THREE.AmbientLight(0x330000, 4.0));
+const key = new THREE.DirectionalLight(0xff8e7d, 0.6);
+key.position.set(200,80,150); scene.add(key);
+const fill = new THREE.DirectionalLight(0x440000, 0.4);
+fill.position.set(-200,-100,-150); scene.add(fill);
+
+// ═══════════════════════════════════════════════════════════════
+// COORDINATE HELPERS
+// ═══════════════════════════════════════════════════════════════
+function ll2v(lat,lon,r){
+  const phi=(90-lat)*Math.PI/180, theta=(lon+180)*Math.PI/180;
+  return new THREE.Vector3(
+    -r*Math.sin(phi)*Math.cos(theta),
+     r*Math.cos(phi),
+     r*Math.sin(phi)*Math.sin(theta)
+  );
+}
+
+function ll2px(lon,lat,W,H){
+  return [(lon+180)/360*W, (90-lat)/180*H];
+}
+
+// ═══════════════════════════════════════════════════════════════
+// EARTH TEXTURE — built from GeoJSON via fetch
+// Cyber style: dark red/black ocean, coral land, bright borders
+// ═══════════════════════════════════════════════════════════════
+async function buildEarthTexture(geojson){
+  const W=4096, H=2048;
+  const cv=document.createElement('canvas'); cv.width=W; cv.height=H;
+  const ctx=cv.getContext('2d');
+
+  // ── Step 1: real equirectangular earth photo as base ─────────
+  await new Promise(resolve=>{
+    const img=new Image();
+    img.crossOrigin='anonymous';
+    img.onload=()=>{
+      ctx.drawImage(img,0,0,W,H);
+      ctx.fillStyle='rgba(10,0,0,0.62)'; ctx.fillRect(0,0,W,H);
+      ctx.fillStyle='rgba(60,0,0,0.22)'; ctx.fillRect(0,0,W,H);
+      resolve();
+    };
+    img.onerror=()=>{ ctx.fillStyle='#100000'; ctx.fillRect(0,0,W,H); resolve(); };
+    img.src='https://unpkg.com/three-globe/example/img/earth-night.jpg';
+  });
+
+  // ── Step 2: cyber grid ───────────────────────────────────────
+  ctx.strokeStyle='rgba(234,7,3,0.07)'; ctx.lineWidth=0.8;
+  for(let lon=-180;lon<=180;lon+=10){
+    const x=(lon+180)/360*W;
+    ctx.beginPath(); ctx.moveTo(x,0); ctx.lineTo(x,H); ctx.stroke();
+  }
+  for(let lat=-90;lat<=90;lat+=10){
+    const y=(90-lat)/180*H;
+    ctx.beginPath(); ctx.moveTo(0,y); ctx.lineTo(W,y); ctx.stroke();
+  }
+  ctx.strokeStyle='rgba(234,7,3,0.18)'; ctx.lineWidth=1.2;
+  const eqY=(90)/180*H;
+  ctx.beginPath(); ctx.moveTo(0,eqY); ctx.lineTo(W,eqY); ctx.stroke();
+  ctx.strokeStyle='rgba(234,7,3,0.07)'; ctx.lineWidth=0.8;
+  [23.5,-23.5,66.5,-66.5].forEach(lat=>{
+    const y=(90-lat)/180*H;
+    ctx.beginPath(); ctx.moveTo(0,y); ctx.lineTo(W,y); ctx.stroke();
+  });
+
+  // ── Step 3: country borders from GeoJSON ─────────────────────
+  function drawFeature(feature){
+    const geom=feature.geometry; if(!geom) return;
+    const polys=geom.type==='Polygon'?[geom.coordinates]:geom.type==='MultiPolygon'?geom.coordinates:[];
+    polys.forEach(poly=>{
+      poly.forEach((ring,ri)=>{
+        ctx.beginPath();
+        ring.forEach(([lon,lat],i)=>{
+          const [x,y]=ll2px(lon,lat,W,H);
+          i===0?ctx.moveTo(x,y):ctx.lineTo(x,y);
+        });
+        ctx.closePath();
+        ctx.strokeStyle='rgba(255,142,125,0.5)';
+        ctx.lineWidth=ri===0?1.4:0.7;
+        ctx.stroke();
+      });
+    });
+  }
+  geojson.features.forEach(f=>drawFeature(f));
+
+  // ── Step 4: continent labels ──────────────────────────────────
+  const CONTINENT_LABELS=[
+    {name:'NORTH AMERICA',lon:-100,lat:50},{name:'SOUTH AMERICA',lon:-60,lat:-15},
+    {name:'EUROPE',lon:15,lat:52},{name:'AFRICA',lon:20,lat:5},
+    {name:'ASIA',lon:90,lat:45},{name:'OCEANIA',lon:134,lat:-25},
+    {name:'ANTARCTICA',lon:0,lat:-80},
+  ];
+  ctx.font='bold 28px "Share Tech Mono", monospace';
+  ctx.textAlign='center'; ctx.textBaseline='middle';
+  CONTINENT_LABELS.forEach(({name,lon,lat})=>{
+    const [x,y]=ll2px(lon,lat,W,H);
+    ctx.fillStyle='rgba(255,142,125,0.55)';
+    ctx.letterSpacing='4px';
+    ctx.fillText(name,x,y);
+  });
+  return new THREE.CanvasTexture(cv);
+}
+
+// ═══════════════════════════════════════════════════════════════
+// COUNTRY NAME SPRITES (3D labels on globe surface)
+// ═══════════════════════════════════════════════════════════════
+const labelGroup = new THREE.Group();
+
+const COUNTRY_LABELS = [
+  // North America
+  {n:'USA',         lat:38,   lon:-97  },
+  {n:'Canada',      lat:60,   lon:-96  },
+  {n:'Mexico',      lat:23,   lon:-102 },
+  {n:'Cuba',        lat:22,   lon:-80  },
+  // South America
+  {n:'Brazil',      lat:-10,  lon:-52  },
+  {n:'Argentina',   lat:-35,  lon:-65  },
+  {n:'Colombia',    lat:4,    lon:-73  },
+  {n:'Peru',        lat:-10,  lon:-76  },
+  {n:'Chile',       lat:-33,  lon:-70  },
+  // Europe
+  {n:'UK',          lat:54,   lon:-2   },
+  {n:'France',      lat:46,   lon:2    },
+  {n:'Germany',     lat:51,   lon:10   },
+  {n:'Spain',       lat:40,   lon:-4   },
+  {n:'Italy',       lat:42,   lon:12   },
+  {n:'Poland',      lat:52,   lon:20   },
+  {n:'Ukraine',     lat:49,   lon:32   },
+  {n:'Sweden',      lat:62,   lon:16   },
+  {n:'Norway',      lat:65,   lon:15   },
+  // Africa
+  {n:'Algeria',     lat:28,   lon:2    },
+  {n:'Nigeria',     lat:9,    lon:8    },
+  {n:'Egypt',       lat:26,   lon:30   },
+  {n:'S. Africa',   lat:-29,  lon:25   },
+  {n:'Ethiopia',    lat:9,    lon:40   },
+  {n:'DR Congo',    lat:-4,   lon:24   },
+  {n:'Sudan',       lat:15,   lon:30   },
+  {n:'Tanzania',    lat:-6,   lon:35   },
+  {n:'Morocco',     lat:32,   lon:-6   },
+  {n:'Libya',       lat:27,   lon:17   },
+  // Asia
+  {n:'Russia',      lat:62,   lon:94   },
+  {n:'China',       lat:35,   lon:104  },
+  {n:'India',       lat:20,   lon:78   },
+  {n:'Kazakhstan',  lat:48,   lon:68   },
+  {n:'Saudi Arabia',lat:24,   lon:45   },
+  {n:'Iran',        lat:32,   lon:54   },
+  {n:'Turkey',      lat:39,   lon:35   },
+  {n:'Pakistan',    lat:30,   lon:70   },
+  {n:'Japan',       lat:36,   lon:138  },
+  {n:'Indonesia',   lat:-2,   lon:118  },
+  {n:'Vietnam',     lat:16,   lon:106  },
+  {n:'Thailand',    lat:15,   lon:101  },
+  {n:'Myanmar',     lat:20,   lon:96   },
+  {n:'Philippines', lat:13,   lon:122  },
+  {n:'Malaysia',    lat:4,    lon:109  },
+  {n:'Uzbekistan',  lat:41,   lon:64   },
+  {n:'Iraq',        lat:33,   lon:44   },
+  {n:'Syria',       lat:35,   lon:38   },
+  // Oceania
+  {n:'Australia',   lat:-25,  lon:134  },
+  {n:'New Zealand', lat:-42,  lon:172  },
+];
+
+function makeTextSprite(text, fontSize=18, color='rgba(255,142,125,0.8)'){
+  const canvas2=document.createElement('canvas');
+  canvas2.width=256; canvas2.height=64;
+  const ctx2=canvas2.getContext('2d');
+  ctx2.clearRect(0,0,256,64);
+  ctx2.font=`${fontSize}px "Share Tech Mono", monospace`;
+  ctx2.fillStyle=color;
+  ctx2.textAlign='center';
+  ctx2.textBaseline='middle';
+  ctx2.fillText(text,128,32);
+  const tex=new THREE.CanvasTexture(canvas2);
+  const mat=new THREE.SpriteMaterial({map:tex,transparent:true,depthWrite:false});
+  const sprite=new THREE.Sprite(mat);
+  sprite.scale.set(14,3.5,1);
+  return sprite;
+}
+
+function buildLabels(){
+  COUNTRY_LABELS.forEach(({n,lat,lon})=>{
+    const pos=ll2v(lat,lon,R+2.5);
+    const sprite=makeTextSprite(n,16,'rgba(255,140,120,0.75)');
+    sprite.position.copy(pos);
+    labelGroup.add(sprite);
+  });
+  scene.add(labelGroup);
+}
+
+// ═══════════════════════════════════════════════════════════════
+// GLOBE MESH
+// ═══════════════════════════════════════════════════════════════
+let globe, mGroup;
+
+async function initGlobe(){
+  setProgress(10,'Fetching world borders...');
+
+  let geojson;
+  try {
+    const res = await fetch('https://cdn.jsdelivr.net/npm/world-atlas@2/countries-110m.json');
+    const topo = await res.json();
+    geojson = topoToGeo(topo);
+    setProgress(40,'Rendering terrain...');
+  } catch(e){
+    console.warn('GeoJSON fetch failed, using fallback texture');
+    geojson = { features:[] };
+    setProgress(40,'Using fallback terrain...');
+  }
+
+  const earthTex = await buildEarthTexture(geojson);
+  setProgress(70,'Building globe...');
+
+  globe = new THREE.Mesh(
+    new THREE.SphereGeometry(R,80,80),
+    new THREE.MeshPhongMaterial({
+      map: earthTex,
+      specular: new THREE.Color(0x220000),
+      shininess: 6,
+      emissive: new THREE.Color(0x0a0000),
+      emissiveIntensity: 0.5,
+    })
+  );
+  scene.add(globe);
+
+  // atmosphere
+  scene.add(new THREE.Mesh(
+    new THREE.SphereGeometry(R*1.035,48,48),
+    new THREE.MeshPhongMaterial({
+      color:0xea0703, transparent:true, opacity:0.04, side:THREE.BackSide
+    })
+  ));
+
+  mGroup = new THREE.Group(); scene.add(mGroup);
+
+  setProgress(85,'Placing labels...');
+  buildLabels();
+
+  setProgress(100,'Ready.');
+  await new Promise(r=>setTimeout(r,400));
+
+  // hide loading, show app
+  document.getElementById('loading-screen').classList.add('fade');
+  document.getElementById('app').style.visibility='visible';
+  setTimeout(()=>{
+    document.getElementById('loading-screen').style.display='none';
+  },700);
+
+  startLoop();
+  seedDemoEvents();
+}
+
+// ═══════════════════════════════════════════════════════════════
+// MINI TOPOJSON → GEOJSON CONVERTER
+// ═══════════════════════════════════════════════════════════════
+function topoToGeo(topo){
+  const key = Object.keys(topo.objects)[0];
+  const obj = topo.objects[key];
+  const arcs = topo.arcs;
+  const scale = topo.transform ? topo.transform.scale : [1,1];
+  const translate = topo.transform ? topo.transform.translate : [0,0];
+
+  function decodeArc(arcIdx){
+    const reversed = arcIdx < 0;
+    const arc = arcs[reversed ? ~arcIdx : arcIdx];
+    let x=0, y=0;
+    const pts = arc.map(([dx,dy])=>{
+      x+=dx; y+=dy;
+      return [x*scale[0]+translate[0], y*scale[1]+translate[1]];
+    });
+    return reversed ? pts.slice().reverse() : pts;
+  }
+
+  function ringCoords(ring){
+    const pts=[];
+    ring.forEach(arcIdx=>{ const a=decodeArc(arcIdx); pts.push(...(pts.length?a.slice(1):a)); });
+    return pts;
+  }
+
+  const features = (obj.geometries||[]).map(g=>{
+    let coords;
+    if(g.type==='Polygon'){
+      coords = g.arcs.map(r=>ringCoords(r));
+    } else if(g.type==='MultiPolygon'){
+      coords = g.arcs.map(poly=>poly.map(r=>ringCoords(r)));
+    } else {
+      return null;
+    }
+    return { type:'Feature', properties:g.properties||{}, geometry:{ type:g.type, coordinates:coords } };
+  }).filter(Boolean);
+
+  return { type:'FeatureCollection', features };
+}
+
+// ═══════════════════════════════════════════════════════════════
+// MARKERS
+// ═══════════════════════════════════════════════════════════════
+function addMarker(evt){
+  const col  = new THREE.Color(RISK_COL[evt.risk]);
+  const pos  = ll2v(evt.lat, evt.lon, R+1.8);
+  const size = evt.risk==='high'?2.4:evt.risk==='medium'?1.8:1.3;
+
+  const core=new THREE.Mesh(
+    new THREE.SphereGeometry(size,14,14),
+    new THREE.MeshBasicMaterial({color:col})
+  );
+  core.position.copy(pos); core.userData=evt; mGroup.add(core);
+
+  const halo=new THREE.Mesh(
+    new THREE.SphereGeometry(size*2.2,10,10),
+    new THREE.MeshBasicMaterial({color:col,transparent:true,opacity:0.1})
+  );
+  halo.position.copy(pos); mGroup.add(halo);
+}
+
+// ═══════════════════════════════════════════════════════════════
+// ARCS
+// ═══════════════════════════════════════════════════════════════
+const arcObjects=[];
+
+function addArc(evt){
+  const start=ll2v(ORIGIN.lat,ORIGIN.lon,R);
+  const end=ll2v(evt.lat,evt.lon,R);
+  const dist=start.distanceTo(end);
+  const arcH=R+dist*0.55;
+  const mid=start.clone().add(end).multiplyScalar(0.5).normalize().multiplyScalar(arcH);
+  const curve=new THREE.QuadraticBezierCurve3(start,mid,end);
+
+  const opacity=evt.risk==='high'?0.9:evt.risk==='medium'?0.65:0.4;
+  const pts=curve.getPoints(100);
+  const geo=new THREE.BufferGeometry().setFromPoints(pts);
+  const mat=new THREE.LineBasicMaterial({
+    color:new THREE.Color(RISK_COL[evt.risk]),
+    transparent:true, opacity
+  });
+  mGroup.add(new THREE.Line(geo,mat));
+}
+
+// ═══════════════════════════════════════════════════════════════
+// DRAG + ZOOM
+// ═══════════════════════════════════════════════════════════════
+let dragging=false, prevMouse={x:0,y:0}, autoRot=true;
+
+canvas.addEventListener('mousedown',e=>{ dragging=true; prevMouse={x:e.clientX,y:e.clientY}; autoRot=false; });
+window.addEventListener('mouseup',()=>{ dragging=false; setTimeout(()=>autoRot=true,3000); });
+window.addEventListener('mousemove',e=>{
+  if(!dragging||!globe) return;
+  const dx=(e.clientX-prevMouse.x)*0.005, dy=(e.clientY-prevMouse.y)*0.005;
+  globe.rotation.y+=dx; globe.rotation.x=Math.max(-1,Math.min(1,globe.rotation.x+dy));
+  mGroup.rotation.y+=dx; mGroup.rotation.x=Math.max(-1,Math.min(1,mGroup.rotation.x+dy));
+  labelGroup.rotation.y+=dx; labelGroup.rotation.x=Math.max(-1,Math.min(1,labelGroup.rotation.x+dy));
+  prevMouse={x:e.clientX,y:e.clientY};
+});
+canvas.addEventListener('wheel',e=>{
+  camera.position.z=Math.max(140,Math.min(500,camera.position.z+e.deltaY*0.18));
+},{passive:true});
+
+// ═══════════════════════════════════════════════════════════════
+// RESIZE
+// ═══════════════════════════════════════════════════════════════
+function resize(){
+  const w=widget.clientWidth,h=widget.clientHeight;
+  renderer.setSize(w,h,false); camera.aspect=w/h; camera.updateProjectionMatrix();
+}
+window.addEventListener('resize',resize); resize();
+
+// ═══════════════════════════════════════════════════════════════
+// RENDER LOOP
+// ═══════════════════════════════════════════════════════════════
+function startLoop(){
+  (function animate(){
+    requestAnimationFrame(animate);
+    if(autoRot&&globe){
+      globe.rotation.y+=0.0012;
+      mGroup.rotation.y+=0.0012;
+      labelGroup.rotation.y+=0.0012;
+    }
+    const rotQ=new THREE.Quaternion().setFromEuler(mGroup.rotation);
+    arcObjects.forEach(a=>{
+      a.t+=a.speed; if(a.t>1) a.t=0;
+      a.dot.position.copy(a.curve.getPoint(a.t).clone().applyQuaternion(rotQ));
+    });
+    renderer.render(scene,camera);
+  })();
+}
+
+// ═══════════════════════════════════════════════════════════════
+// STATE + EVENTS
+// ═══════════════════════════════════════════════════════════════
+const events=[];
+let cntH=0,cntM=0,cntL=0;
+
+function ingestEvent(evt){
+  const idx=events.length; events.push(evt);
+  if(globe){ addMarker(evt); addArc(evt); }
+  addToFeed(evt,idx);
+  if(evt.risk==='high')        {cntH++;document.getElementById('g-cnt-h').textContent=cntH;}
+  else if(evt.risk==='medium') {cntM++;document.getElementById('g-cnt-m').textContent=cntM;}
+  else                         {cntL++;document.getElementById('g-cnt-l').textContent=cntL;}
+  document.getElementById('g-total').textContent=`${events.length} event${events.length!==1?'s':''}`;
+  showDetail(idx);
+}
+
+function addToFeed(evt,idx){
+  const feed=document.getElementById('g-feed');
+  const item=document.createElement('div');
+  item.className='g-feed-item'; item.id=`gfi-${idx}`;
+  const rc={high:'rh',medium:'rm',low:'rl'}[evt.risk];
+  item.innerHTML=`
+    <div class="g-feed-url">${evt.url}</div>
+    <div class="g-feed-meta">
+      <span class="rbadge ${rc}">${evt.risk}</span>
+      <span>${evt.city||'?'}, ${evt.countryCode||'?'}</span>
+      <span style="margin-left:auto">${evt.timestamp.slice(11,19)}</span>
+    </div>`;
+  item.onclick=()=>showDetail(idx);
+  feed.insertBefore(item,feed.firstChild);
+}
+
+function showDetail(idx){
+  const evt=events[idx],col=RISK_COL[evt.risk],pct=Math.round(evt.score*100);
+  document.querySelectorAll('.g-feed-item').forEach(el=>el.classList.remove('active'));
+  document.getElementById(`gfi-${idx}`)?.classList.add('active');
+  document.getElementById('g-det-empty').style.display='none';
+  const card=document.getElementById('g-det-card'); card.classList.remove('hidden');
+  card.innerHTML=`
+    <div style="color:#fff;border-bottom:1px solid #111;padding-bottom:8px;margin-bottom:8px;word-break:break-all;line-height:1.6">${evt.url}</div>
+    <div style="line-height:2.2">
+      <div class="flex justify-between"><span style="color:#adaaaa">Risk</span><span style="color:${col};font-weight:700">${evt.risk.toUpperCase()}</span></div>
+      <div class="flex justify-between"><span style="color:#adaaaa">IP</span><span style="color:#fff">${evt.ip||'—'}</span></div>
+      <div class="flex justify-between"><span style="color:#adaaaa">City</span><span style="color:#fff">${evt.city||'—'}</span></div>
+      <div class="flex justify-between"><span style="color:#adaaaa">Country</span><span style="color:#fff">${evt.country||evt.countryCode||'—'}</span></div>
+      <div class="flex justify-between"><span style="color:#adaaaa">ISP</span><span style="color:#fff;max-width:130px;overflow:hidden;text-overflow:ellipsis;white-space:nowrap">${evt.isp||'—'}</span></div>
+      <div class="flex justify-between"><span style="color:#adaaaa">ASN</span><span style="color:#fff;max-width:130px;overflow:hidden;text-overflow:ellipsis;white-space:nowrap">${evt.asn||'—'}</span></div>
+      <div class="flex justify-between"><span style="color:#adaaaa">Time</span><span style="color:#fff">${evt.timestamp.slice(0,19).replace('T',' ')}</span></div>
+    </div>`;
+  document.getElementById('g-score-sec').classList.remove('hidden');
+  document.getElementById('g-score-pct').textContent=`${pct}%`;
+  document.getElementById('g-score-pct').style.color=col;
+  document.getElementById('g-score-fill').style.width=`${pct}%`;
+  document.getElementById('g-score-fill').style.background=col;
+  document.getElementById('g-score-fill').style.boxShadow=`0 0 10px ${col}88`;
+}
+
+// ═══════════════════════════════════════════════════════════════
+// TOAST
+// ═══════════════════════════════════════════════════════════════
+function toast(msg,color='#ff2525'){
+  const el=document.getElementById('toast');
+  el.textContent=msg; el.style.color=color;
+  el.classList.add('show');
+  setTimeout(()=>el.classList.remove('show'),3500);
+}
+
+// ═══════════════════════════════════════════════════════════════
+// ANALYZE
+// ═══════════════════════════════════════════════════════════════
+window.gAnalyze=async function(){
+  const input=document.getElementById('g-url-input');
+  const btn=document.getElementById('g-analyze-btn');
+  const url=input.value.trim();
+  if(!url){toast('Enter a URL first');return;}
+  btn.disabled=true; btn.textContent='⏳ ANALYZING...';
+  try{
+    const res=await fetch(BACKEND_URL,{
+      method:'POST',
+      headers:{'Content-Type':'application/json'},
+      body:JSON.stringify({"url": url}),
+    });
+    if(!res.ok){const e=await res.json().catch(()=>({})); throw new Error(e.detail||`Error ${res.status}`);}
+    const evt=await res.json();
+    console.log(evt);
+    ingestEvent(evt);
+    toast(`${evt.risk.toUpperCase()} · ${Math.round(evt.score*100)}% · ${evt.city}`,
+      evt.risk==='high'?'#ff2525':evt.risk==='medium'?'#ff8c00':'#00e676');
+  }catch(e){
+    console.warn('Backend offline, demo mode:',e.message);
+    toast('⚠ Backend offline — demo mode','#ff8c00');
+    await new Promise(r=>setTimeout(r,700));
+    ingestEvent(makeDemoEvent(url));
+  }finally{
+    btn.disabled=false; btn.textContent='⚡ RUN ANALYSIS'; input.value='';
+  }
+};
+document.getElementById('g-url-input').addEventListener('keydown',e=>{if(e.key==='Enter')gAnalyze();});
+/*
+// ═══════════════════════════════════════════════════════════════
+// DEMO GENERATOR
+// ═══════════════════════════════════════════════════════════════
+const LOCS=[
+  {country:'Russia',        countryCode:'RU',city:'Moscow',    lat:55.75,lon:37.61 },
+  {country:'Netherlands',   countryCode:'NL',city:'Amsterdam', lat:52.37,lon:4.89  },
+  {country:'China',         countryCode:'CN',city:'Beijing',   lat:39.90,lon:116.39},
+  {country:'United States', countryCode:'US',city:'Ashburn',   lat:39.04,lon:-77.49},
+  {country:'Germany',       countryCode:'DE',city:'Frankfurt', lat:50.11,lon:8.68  },
+  {country:'Brazil',        countryCode:'BR',city:'São Paulo', lat:-23.55,lon:-46.63},
+  {country:'France',        countryCode:'FR',city:'Paris',     lat:48.85,lon:2.35  },
+  {country:'Singapore',     countryCode:'SG',city:'Singapore', lat:1.35, lon:103.82},
+  {country:'Ukraine',       countryCode:'UA',city:'Kyiv',      lat:50.45,lon:30.52 },
+  {country:'Romania',       countryCode:'RO',city:'Bucharest', lat:44.43,lon:26.10 },
+  {country:'India',         countryCode:'IN',city:'Mumbai',    lat:19.08,lon:72.88 },
+  {country:'Nigeria',       countryCode:'NG',city:'Lagos',     lat:6.52, lon:3.38  },
+];
+const ISPS=['OVH SAS','Hetzner Online','Cloudflare','DigitalOcean','Linode','Vultr','Contabo','M247'];
+const ASNS=['AS16276','AS24940','AS13335','AS14061','AS63949','AS20473','AS51167','AS9009'];
+function rnd(a,b){return Math.floor(Math.random()*(b-a+1))+a;}
+function makeDemoEvent(url){
+  const loc=LOCS[rnd(0,LOCS.length-1)];
+  const score=Math.random();
+  const risk=score>=0.75?'high':score>=0.45?'medium':'low';
+  const i=rnd(0,ISPS.length-1);
+  return {
+    url,score:parseFloat(score.toFixed(4)),risk,
+    ip:`${rnd(1,254)}.${rnd(1,254)}.${rnd(1,254)}.${rnd(1,254)}`,
+    lat:loc.lat,lon:loc.lon,country:loc.country,countryCode:loc.countryCode,city:loc.city,
+    isp:ISPS[i],org:ISPS[i],asn:`${ASNS[i]} ${ISPS[i]}`,
+    dns:{},timestamp:new Date().toISOString().slice(0,19)+'Z',
+  };
+}
+*/
+// ═══════════════════════════════════════════════════════════════
+// CLOCK
+// ═══════════════════════════════════════════════════════════════
+setInterval(()=>{
+  document.getElementById('g-clock').textContent=
+    new Date().toUTCString().slice(17,25)+' UTC';
+},1000);
+/*
+// ═══════════════════════════════════════════════════════════════
+// SEED EVENTS
+// ═══════════════════════════════════════════════════════════════
+function seedDemoEvents(){
+  const seeds=[
+    'http://paypa1-secure-login.xyz/verify',
+    'http://amazon-account-alert.ru/reset',
+    'http://secure-bankofamerica.tk/login',
+  ];
+  let d=600;
+  seeds.forEach(url=>{setTimeout(()=>ingestEvent(makeDemoEvent(url)),d);d+=900;});
+}
+*/
+// ═══════════════════════════════════════════════════════════════
+// BOOT
+// ═══════════════════════════════════════════════════════════════
+initGlobe();
+
+})();
+</script>
+</body>
+</html>
