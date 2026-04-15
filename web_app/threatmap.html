@@ -676,41 +676,6 @@ window.gAnalyze=async function(){
   }
 };
 document.getElementById('g-url-input').addEventListener('keydown',e=>{if(e.key==='Enter')gAnalyze();});
-/*
-// ═══════════════════════════════════════════════════════════════
-// DEMO GENERATOR
-// ═══════════════════════════════════════════════════════════════
-const LOCS=[
-  {country:'Russia',        countryCode:'RU',city:'Moscow',    lat:55.75,lon:37.61 },
-  {country:'Netherlands',   countryCode:'NL',city:'Amsterdam', lat:52.37,lon:4.89  },
-  {country:'China',         countryCode:'CN',city:'Beijing',   lat:39.90,lon:116.39},
-  {country:'United States', countryCode:'US',city:'Ashburn',   lat:39.04,lon:-77.49},
-  {country:'Germany',       countryCode:'DE',city:'Frankfurt', lat:50.11,lon:8.68  },
-  {country:'Brazil',        countryCode:'BR',city:'São Paulo', lat:-23.55,lon:-46.63},
-  {country:'France',        countryCode:'FR',city:'Paris',     lat:48.85,lon:2.35  },
-  {country:'Singapore',     countryCode:'SG',city:'Singapore', lat:1.35, lon:103.82},
-  {country:'Ukraine',       countryCode:'UA',city:'Kyiv',      lat:50.45,lon:30.52 },
-  {country:'Romania',       countryCode:'RO',city:'Bucharest', lat:44.43,lon:26.10 },
-  {country:'India',         countryCode:'IN',city:'Mumbai',    lat:19.08,lon:72.88 },
-  {country:'Nigeria',       countryCode:'NG',city:'Lagos',     lat:6.52, lon:3.38  },
-];
-const ISPS=['OVH SAS','Hetzner Online','Cloudflare','DigitalOcean','Linode','Vultr','Contabo','M247'];
-const ASNS=['AS16276','AS24940','AS13335','AS14061','AS63949','AS20473','AS51167','AS9009'];
-function rnd(a,b){return Math.floor(Math.random()*(b-a+1))+a;}
-function makeDemoEvent(url){
-  const loc=LOCS[rnd(0,LOCS.length-1)];
-  const score=Math.random();
-  const risk=score>=0.75?'high':score>=0.45?'medium':'low';
-  const i=rnd(0,ISPS.length-1);
-  return {
-    url,score:parseFloat(score.toFixed(4)),risk,
-    ip:`${rnd(1,254)}.${rnd(1,254)}.${rnd(1,254)}.${rnd(1,254)}`,
-    lat:loc.lat,lon:loc.lon,country:loc.country,countryCode:loc.countryCode,city:loc.city,
-    isp:ISPS[i],org:ISPS[i],asn:`${ASNS[i]} ${ISPS[i]}`,
-    dns:{},timestamp:new Date().toISOString().slice(0,19)+'Z',
-  };
-}
-*/
 // ═══════════════════════════════════════════════════════════════
 // CLOCK
 // ═══════════════════════════════════════════════════════════════
@@ -718,23 +683,6 @@ setInterval(()=>{
   document.getElementById('g-clock').textContent=
     new Date().toUTCString().slice(17,25)+' UTC';
 },1000);
-/*
-// ═══════════════════════════════════════════════════════════════
-// SEED EVENTS
-// ═══════════════════════════════════════════════════════════════
-function seedDemoEvents(){
-  const seeds=[
-    'http://paypa1-secure-login.xyz/verify',
-    'http://amazon-account-alert.ru/reset',
-    'http://secure-bankofamerica.tk/login',
-  ];
-  let d=600;
-  seeds.forEach(url=>{setTimeout(()=>ingestEvent(makeDemoEvent(url)),d);d+=900;});
-}
-*/
-// ═══════════════════════════════════════════════════════════════
-// BOOT
-// ═══════════════════════════════════════════════════════════════
 initGlobe();
 
 })();

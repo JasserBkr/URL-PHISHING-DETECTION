@@ -15,3 +15,7 @@ tldextract>=5.1.0
 fastapi
 uvicorn
 python-multipart
+
+# Networking & Requests (Added missing ones)
+requests>=2.31.0
+dnspython>=2.4.0
