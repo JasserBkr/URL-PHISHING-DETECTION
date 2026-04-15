@@ -1,5 +1,4 @@
 services:
-
   app:
     build:
       context: .
@@ -15,7 +14,6 @@ services:
     depends_on:
       - playwright
     restart: always
-
   playwright:
     build:
       context: .
