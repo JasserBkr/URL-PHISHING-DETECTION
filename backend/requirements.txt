@@ -1,21 +1,17 @@
-# Machine Learning & Data
-numpy>=1.26.4
-pandas>=2.1.0
-scikit-learn>=1.3.0
-joblib>=1.3.2
-shap>=0.44.0
-ucimlrepo>=0.0.3
-
-# Extraction & Scraping
+numpy==1.26.4
+pandas==2.1.4
+scikit-learn==1.8.0
+joblib==1.3.2
+shap>=0.45.0
+ucimlrepo==0.0.3
 playwright==1.40.0
-beautifulsoup4>=4.12.0
-tldextract>=5.1.0
-
-# API Server
-fastapi
-uvicorn
-python-multipart
-
-# Networking & Requests (Added missing ones)
-requests>=2.31.0
-dnspython>=2.4.0
+beautifulsoup4==4.12.3
+tldextract==5.1.2
+fastapi==0.115.0
+uvicorn==0.30.6
+python-multipart==0.0.9
+requests==2.31.0
+dnspython==2.6.1
+numba==0.59.1
+llvmlite==0.42.0
+httpx==0.27.0

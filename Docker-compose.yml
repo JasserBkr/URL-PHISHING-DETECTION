@@ -7,18 +7,46 @@ services:
     ports:
       - "8000:8000"
     volumes:
-      - ./temp_scans:/app/temp_scans
       - ./web_app/screenshots:/app/web_app/screenshots
     environment:
-      PLAYWRIGHT_SERVICE_URL: "http://playwright:3000/"
+      - PLAYWRIGHT_SERVICE_URL=http://playwright:3000
     depends_on:
-      - playwright
+      playwright:
+        condition: service_healthy   # wait until playwright is actually ready
     restart: always
+    networks:
+      - frontend
+      - backend
+
   playwright:
     build:
       context: .
       dockerfile: Dockerfile.playwright
     container_name: playwright_service
-    expose:
-      - "3000"
     restart: always
+    # Security hardening — malicious pages run inside this container
+    security_opt:
+      - no-new-privileges:true
+    cap_drop:
+      - ALL
+    cap_add:
+      - SYS_ADMIN        # required by Chromium sandbox
+    mem_limit: 512m      # prevent malicious pages from DoS-ing the host
+    cpus: "1.0"
+    tmpfs:
+      - /tmp             # temp files in RAM only
+    healthcheck:
+      test: ["CMD", "curl", "-f", "http://localhost:3000/health"]
+      interval: 10s
+      timeout: 5s
+      retries: 5
+      start_period: 15s
+    networks:
+      - backend          # only reachable by app container
+      - scannet          # isolated network for visiting malicious URLs
+
+networks:
+  frontend:              # app ↔ internet (user traffic)
+  backend:               # app ↔ playwright only (internal)
+  scannet:               # playwright ↔ malicious sites (isolated)
+    driver: bridge
