@@ -3,9 +3,9 @@ import pandas as pd
 import numpy as np
 
 # -------- load model artifacts once --------
-model        = joblib.load("backend/Model/model1.pkl")
-explainer    = joblib.load("backend/Model/explainer1.pkl")
-feature_order = joblib.load("backend/Model/feature_order1.pkl")
+model        = joblib.load("Model/model1.pkl")
+explainer    = joblib.load("Model/explainer1.pkl")
+feature_order = joblib.load("Model/feature_order1.pkl")
 
 def predict_url(features_df: pd.DataFrame) -> dict:
 

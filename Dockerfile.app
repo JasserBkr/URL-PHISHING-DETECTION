@@ -1,6 +1,6 @@
 FROM python:3.11-slim
 
-#Install system deps needed by your libraries
+# Install system deps
 RUN apt-get update && apt-get install -y \
     gcc \
     libgomp1 \
@@ -9,16 +9,19 @@ RUN apt-get update && apt-get install -y \
 
 WORKDIR /app
 
-#Copy and install Python dependencies
+# Copy and install Python dependencies
 COPY backend/requirements.txt .
 RUN pip install --no-cache-dir -r requirements.txt
 
-#Copy backend code
+# Copy backend code
 COPY backend/ ./backend/
 
-#Copy frontend
+# Copy frontend
 COPY web_app/ ./web_app/
 
 EXPOSE 8000
+WORKDIR /app/backend
 
-CMD ["python", "backend/main.py"]
+# Use uvicorn directly — NOT python main.py
+# 0.0.0.0 so the port is reachable from outside the container
+CMD ["uvicorn", "main:app", "--host", "0.0.0.0", "--port", "8000"]

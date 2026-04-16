@@ -46,7 +46,7 @@ async function scan() {
 
     try {
         // ── POST to /analyze ──────────────────────────────────────────────
-        const res = await fetch("http://127.0.0.1:8000/analyze", {
+        const res = await fetch("/analyze", {
             method:  "POST",
             headers: { "Content-Type": "application/json" },
             body:    JSON.stringify({ url }),
@@ -110,7 +110,7 @@ async function scan() {
         }, 400);
 
         // ── Fire-and-forget DNS recon (saves to localStorage for dns page) 
-        fetch("http://127.0.0.1:8000/DnsRec", {
+        fetch("/DnsRec", {
             method:  "POST",
             headers: { "Content-Type": "application/json" },
             body:    JSON.stringify({ url }),
@@ -166,7 +166,10 @@ function feature_bar(value, bar) {
 // Targets the feed container by id="liveFeed" (added to index.html)
 const feedList = document.getElementById('liveFeed');
 
-const ws = new WebSocket("ws://127.0.0.1:8000/ws/feed");
+
+const wsProtocol = window.location.protocol === 'https:' ? 'wss:' : 'ws:';
+const wsUrl = `${wsProtocol}//${window.location.host}/ws/feed`;
+const ws = new WebSocket(wsUrl);
 
 ws.onmessage = function (event) {
     if (!feedList) return;

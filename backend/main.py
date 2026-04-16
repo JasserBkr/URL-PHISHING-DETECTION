@@ -1,4 +1,7 @@
 import uvicorn
+import os
+import base64
+import httpx
 from fastapi import FastAPI, HTTPException, WebSocket, WebSocketDisconnect
 from fastapi.responses import FileResponse
 from fastapi.staticfiles import StaticFiles
@@ -11,9 +14,7 @@ import json
 from datetime import datetime
 import logging
 from pydantic import BaseModel
-import subprocess
 import uuid
-import shutil
 from contextlib import asynccontextmanager
 from predictor_py import predict_url
 from info_from_ip import dns_rec
@@ -22,11 +23,15 @@ from threatmap import build_threat_event
 logger = logging.getLogger(__name__)
 logging.basicConfig(level=logging.INFO)
 
-BASE_DIR     = Path(__file__).resolve().parent.parent
+BASE_DIR      = Path(__file__).resolve().parent.parent
 feature_order = joblib.load(Path(__file__).resolve().parent / "Model" / "feature_order1.pkl")
 DROPPED_COLS  = {"URL", "Domain", "TLD", "Title"}
 
+# Playwright service URL — injected via env var in docker-compose
+PLAYWRIGHT_URL = os.getenv("PLAYWRIGHT_SERVICE_URL", "http://playwright:3000")
+
 url_history = []
+
 
 # ── Request model ──────────────────────────────────────────────────────────
 class AnalyzeRequest(BaseModel):
@@ -41,7 +46,9 @@ async def lifespan(app: FastAPI):
     global model
     logger.info("Loading model...")
     try:
-        model = joblib.load(Path(__file__).resolve().parent / "Model" / "model1.pkl")
+        model = joblib.load(
+            Path(__file__).resolve().parent / "Model" / "model1.pkl"
+        )
         logger.info(f"Model loaded: {type(model).__name__}")
     except FileNotFoundError:
         logger.error("model1.pkl not found")
@@ -53,8 +60,6 @@ async def lifespan(app: FastAPI):
 # ── App ────────────────────────────────────────────────────────────────────
 app = FastAPI(title="PhishOps API", version="1.0.0", lifespan=lifespan)
 
-# /static/* serves everything inside web_app/
-# so web_app/screenshots/foo.png → /static/screenshots/foo.png
 app.mount("/static", StaticFiles(directory=BASE_DIR / "web_app"), name="static")
 
 
@@ -111,18 +116,15 @@ async def dns(req: AnalyzeRequest):
     return res
 
 
-
-
 @app.post("/clear_history")
 async def clear_session_history():
-    """Empties the list (triggered when the user refreshes)."""
     global url_history
     url_history = []
     return {"status": "cleared"}
 
 
 @app.post("/analyze")
-async def analyze(req: AnalyzeRequest,request: Request):
+async def analyze(req: AnalyzeRequest, request: Request):
     url = req.url.strip()
     if not url:
         raise HTTPException(status_code=400, detail="URL cannot be empty")
@@ -130,70 +132,60 @@ async def analyze(req: AnalyzeRequest,request: Request):
     if not url.startswith(("http://", "https://")):
         url = "https://" + url
 
-    scan_id  = str(uuid.uuid4())
-    temp_dir = BASE_DIR / "temp_scans" / scan_id
+    scan_id = str(uuid.uuid4())
 
-    # Screenshots folder lives inside web_app so StaticFiles can serve it:
-    #   web_app/screenshots/scan_<id>.png  →  /static/screenshots/scan_<id>.png
+    # Screenshots folder lives inside web_app so StaticFiles can serve it
     screenshots_dir = BASE_DIR / "web_app" / "screenshots"
     screenshots_dir.mkdir(parents=True, exist_ok=True)
-    temp_dir.mkdir(parents=True, exist_ok=True)
 
     logger.info(f"Starting scan [{scan_id}]: {url}")
 
-    # ── A: Docker → extract_features.py ───────────────────────────────────
+    # ── A: Call playwright microservice (HTTP, not docker run) ─────────────
     features       = None
     screenshot_url = "/static/placeholder.png"
     try:
-        docker_cmd = [
-            "docker", "run", "--rm",
-            "-v", f"{temp_dir.absolute()}:/app/output",
-            "phish-ops-scanner",
-            url,
-        ]
-        logger.info("Launching container...")
-        process = await asyncio.to_thread(
-            subprocess.run,
-            docker_cmd,
-            capture_output=True,
-            text=True,
-            timeout=120,   # Playwright + page load can take a while
-        )
+        async with httpx.AsyncClient(timeout=90) as client:
+            # First check the service is alive
+            try:
+                await client.get(f"{PLAYWRIGHT_URL}/health")
+            except Exception:
+                raise Exception(
+                    f"Playwright service unreachable at {PLAYWRIGHT_URL}. "
+                    "Is the playwright container running?"
+                )
 
-        logger.info(f"Container exited with code {process.returncode}")
-        if process.stderr:
-            logger.warning(f"Container stderr: {process.stderr.strip()}")
+            resp = await client.post(
+                f"{PLAYWRIGHT_URL}/scan",
+                json={"url": url, "scan_id": scan_id},
+            )
+            resp.raise_for_status()
+            data = resp.json()
 
-        if process.returncode != 0:
-            raise Exception(f"Container exited {process.returncode}: {process.stderr.strip()}")
+        if "error" in data:
+            raise Exception(f"Scanner error: {data['error']}")
 
-        stdout = process.stdout.strip()
-        if not stdout:
-            raise Exception("Container produced no stdout — check extract_features.py")
-
-        features = json.loads(stdout)
-
-        if "error" in features:
-            raise Exception(f"extract_features reported error: {features['error']}")
-
-        # Move screenshot out before temp_dir is deleted
-        source_img = temp_dir / "screenshot.png"
-        if source_img.exists():
+        # Save screenshot from base64 — no shared volume needed
+        if data.get("screenshot_b64"):
             fname    = f"scan_{scan_id}.png"
             dest_img = screenshots_dir / fname
-            shutil.move(str(source_img), str(dest_img))
+            dest_img.write_bytes(base64.b64decode(data.pop("screenshot_b64")))
             screenshot_url = f"/static/screenshots/{fname}"
-            logger.info(f"Screenshot → {screenshot_url}")
+            logger.info(f"Screenshot saved → {screenshot_url}")
         else:
-            logger.warning("Container did not produce screenshot.png")
+            data.pop("screenshot_b64", None)
+            logger.warning("Playwright returned no screenshot")
 
+        features = data
+
+    except httpx.HTTPStatusError as e:
+        logger.error(f"Playwright service HTTP error: {e.response.status_code} — {e.response.text}")
+        raise HTTPException(
+            status_code=500,
+            detail=f"Feature extraction failed: {e.response.text}"
+        )
     except Exception as e:
         logger.error(f"Feature extraction failed: {e}")
         raise HTTPException(status_code=500, detail=f"Feature extraction failed: {str(e)}")
-    finally:
-        # Always clean up temp dir (container already gone due to --rm)
-        if temp_dir.exists():
-            shutil.rmtree(temp_dir)
 
     # ── B: ML prediction ───────────────────────────────────────────────────
     try:
@@ -213,14 +205,17 @@ async def analyze(req: AnalyzeRequest,request: Request):
 
     # ── D: Threat event (non-fatal) ────────────────────────────────────────
     try:
-        ml_score = result["probability"] if result["prediction"] == "phishing" \
-                   else (1 - result["probability"])
+        ml_score = (
+            result["probability"]
+            if result["prediction"] == "phishing"
+            else (1 - result["probability"])
+        )
         event = await asyncio.to_thread(build_threat_event, url, ml_score, dns_report)
     except Exception as e:
         logger.warning(f"build_threat_event failed (non-fatal): {e}")
         event = {}
 
-    # ── E: Final response — guaranteed keys for frontend ──────────────────
+    # ── E: Final response ──────────────────────────────────────────────────
     response = {
         **event,
         "prediction":   result["prediction"],
@@ -228,12 +223,12 @@ async def analyze(req: AnalyzeRequest,request: Request):
         "top_features": result.get("top_features", {}),
         "screenshot":   screenshot_url,
     }
+
     referer = request.headers.get("referer", "")
     if "threatmap.html" in referer:
         url_history.append(url)
         print(url_history)
 
-    # Broadcast to live-feed WebSocket clients
     ui_status = "MALICIOUS" if result["prediction"] == "phishing" else "CLEAN"
     await manager.broadcast(json.dumps({
         "status": ui_status,
@@ -241,9 +236,11 @@ async def analyze(req: AnalyzeRequest,request: Request):
         "time":   datetime.now().strftime("%H:%M:%S"),
     }))
 
-    logger.info(f"Scan complete [{scan_id}]: {result['prediction']} ({result['probability']:.2%})")
+    logger.info(
+        f"Scan complete [{scan_id}]: {result['prediction']} ({result['probability']:.2%})"
+    )
     return response
 
 
 if __name__ == "__main__":
-    uvicorn.run("main:app", host="127.0.0.1", port=8000)
+    uvicorn.run("main:app", host="0.0.0.0", port=8000)
