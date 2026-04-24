@@ -37,20 +37,19 @@ An advanced, real-time phishing detection platform. PhishOps combines Machine Le
 Prerequisites
 Docker and Docker Compose
 
-Git
 
 Running Locally (Dockerized)
 The easiest and safest way to run PhishOps is via Docker Compose, as it sets up the secure Playwright sandbox automatically.
 
 Clone the repository:
 
-Bash
+Bash:
 git clone [https://github.com/JasserBkr/URL-PHISHING-DETECTION]
 cd URL-PHISHING-DETECTION
 
 Build and start the containers:
 
-Bash
+Bash:
 docker compose up -d --build
 Access the application:
 
