@@ -1,4 +1,4 @@
-# 🎣 PhishIntel v1.0 (PhishOps)
+# 🎣 PhishOps v1.0
 
 An advanced, real-time phishing detection platform. PhishOps combines Machine Learning (Random Forest + SHAP), secure DOM extraction via Playwright, and active DNS/IP reconnaissance to identify and neutralize malicious web domains.
 
