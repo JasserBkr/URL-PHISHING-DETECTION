@@ -6,8 +6,6 @@ services:
     container_name: phishing_app
     ports:
       - "8000:8000"
-    volumes:
-      - ./web_app/screenshots:/app/web_app/screenshots
     environment:
       - PLAYWRIGHT_SERVICE_URL=http://playwright:3000
     depends_on:

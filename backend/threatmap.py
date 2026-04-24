@@ -22,9 +22,9 @@ from typing import Optional
  
 logger = logging.getLogger(__name__)
  
-# ---------------------------------------------------------------------------
-# 1a. Resolve URL → IP
-# ---------------------------------------------------------------------------
+
+# Resolve URL → IP
+
  
 def resolve_ip(url: str) -> Optional[str]:
     """
@@ -53,9 +53,9 @@ def resolve_ip(url: str) -> Optional[str]:
         return None
  
  
-# ---------------------------------------------------------------------------
-# 1b. GeoIP lookup via ip-api.com (free, no key needed)
-# ---------------------------------------------------------------------------
+
+# GeoIP lookup via ip-api.com
+
  
 GEOIP_API = "http://ip-api.com/json/{ip}"
  
@@ -110,7 +110,7 @@ def lookup_geoip(ip: str) -> dict:
             "lon":         data.get("lon", 0.0),
             "isp":         data.get("isp", "Unknown"),
             "org":         data.get("org", "Unknown"),
-            "asn":         data.get("as", "Unknown"),   # e.g. "AS13335 Cloudflare"
+            "asn":         data.get("as", "Unknown"),  
         }
  
     except requests.exceptions.Timeout:
@@ -130,9 +130,9 @@ def _is_private_ip(ip: str) -> bool:
         return False
  
  
-# ---------------------------------------------------------------------------
-# 1c. Build the unified threat event object
-# ---------------------------------------------------------------------------
+
+#Build the unified threat event object
+
  
 RISK_THRESHOLDS = {
     "high":    0.70,   # score >= 0.70  → phishing (red on map)

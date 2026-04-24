@@ -45,7 +45,6 @@ async function scan() {
     }, 400);
 
     try {
-        // ── POST to /analyze ──────────────────────────────────────────────
         const res = await fetch("/analyze", {
             method:  "POST",
             headers: { "Content-Type": "application/json" },
@@ -163,36 +162,72 @@ function feature_bar(value, bar) {
 }
 
 // ── Live Intel Feed (WebSocket) ───────────────────────────────────────────
-// Targets the feed container by id="liveFeed" (added to index.html)
 const feedList = document.getElementById('liveFeed');
 
+let ws = null;
+let reconnectAttempts = 0;
+const MAX_RECONNECT_ATTEMPTS = 5;
 
-const wsProtocol = window.location.protocol === 'https:' ? 'wss:' : 'ws:';
-const wsUrl = `${wsProtocol}//${window.location.host}/ws/feed`;
-const ws = new WebSocket(wsUrl);
+function connectWebSocket() {
+    if (!feedList) {
+        console.log('Live feed element not found, skipping WebSocket');
+        return;
+    }
 
-ws.onmessage = function (event) {
-    if (!feedList) return;
-    const data    = JSON.parse(event.data);
-    const itemDiv = document.createElement("div");
-    itemDiv.className = "p-4 border-b border-white/5 hover:bg-surface-bright transition-colors cursor-pointer";
+    const wsProtocol = window.location.protocol === 'https:' ? 'wss:' : 'ws:';
+    const wsUrl = `${wsProtocol}//${window.location.host}/ws/feed`;
+    
+    try {
+        ws = new WebSocket(wsUrl);
+        
+        ws.onopen = function() {
+            console.log('WebSocket connected');
+            reconnectAttempts = 0;
+        };
 
-    let colorClass = "text-secondary-dim";
-    if (data.status === "MALICIOUS") colorClass = "text-primary-dim";
-    if (data.status === "SUSPICIOUS") colorClass = "text-primary";
+        ws.onmessage = function (event) {
+            const data = JSON.parse(event.data);
+            const itemDiv = document.createElement("div");
+            itemDiv.className = "p-4 border-b border-white/5 hover:bg-surface-bright transition-colors cursor-pointer";
 
-    itemDiv.innerHTML = `
-        <div class="flex justify-between mb-1">
-            <span class="text-[10px] font-headline font-bold ${colorClass}">${data.status}</span>
-            <span class="text-[9px] font-headline text-on-surface-variant">${data.time}</span>
-        </div>
-        <div class="text-[11px] font-headline text-on-surface truncate tracking-wider">${data.url}</div>
-    `;
+            let colorClass = "text-secondary-dim";
+            if (data.status === "MALICIOUS") colorClass = "text-primary-dim";
+            if (data.status === "SUSPICIOUS") colorClass = "text-primary";
 
-    feedList.insertBefore(itemDiv, feedList.firstChild);
-    if (feedList.children.length > 50) feedList.removeChild(feedList.lastChild);
-};
+            itemDiv.innerHTML = `
+                <div class="flex justify-between mb-1">
+                    <span class="text-[10px] font-headline font-bold ${colorClass}">${data.status}</span>
+                    <span class="text-[9px] font-headline text-on-surface-variant">${data.time}</span>
+                </div>
+                <div class="text-[11px] font-headline text-on-surface truncate tracking-wider">${data.url}</div>
+            `;
 
-ws.onerror = function (e) {
-    console.error("WebSocket error:", e);
-};
+            feedList.insertBefore(itemDiv, feedList.firstChild);
+            if (feedList.children.length > 50) feedList.removeChild(feedList.lastChild);
+        };
+
+        ws.onerror = function (e) {
+            console.error("WebSocket error:", e);
+        };
+
+        ws.onclose = function(e) {
+            console.log('WebSocket closed:', e.reason);
+            // Auto-reconnect with exponential backoff
+            if (reconnectAttempts < MAX_RECONNECT_ATTEMPTS) {
+                reconnectAttempts++;
+                const delay = Math.min(1000 * Math.pow(2, reconnectAttempts), 30000);
+                console.log(`Reconnecting in ${delay}ms... (attempt ${reconnectAttempts})`);
+                setTimeout(connectWebSocket, delay);
+            } else {
+                console.error('Max WebSocket reconnect attempts reached');
+            }
+        };
+    } catch (error) {
+        console.error('Failed to create WebSocket:', error);
+    }
+}
+
+// Only connect if the page has a live feed element
+if (feedList) {
+    connectWebSocket();
+}

@@ -2,7 +2,7 @@ import uvicorn
 import os
 import base64
 import httpx
-from fastapi import FastAPI, HTTPException, WebSocket, WebSocketDisconnect
+from fastapi import FastAPI, HTTPException, WebSocket, WebSocketDisconnect,BackgroundTasks
 from fastapi.responses import FileResponse
 from fastapi.staticfiles import StaticFiles
 from fastapi import Request
@@ -87,10 +87,6 @@ manager = ConnectionManager()
 
 
 # ── Routes ─────────────────────────────────────────────────────────────────
-@app.get("/health")
-def health():
-    return {"status": "ok", "model_loaded": model is not None}
-
 
 @app.get("/")
 async def home():
@@ -100,11 +96,21 @@ async def home():
 @app.websocket("/ws/feed")
 async def websocket_endpoint(websocket: WebSocket):
     await manager.connect(websocket)
+    logger.info(f"WebSocket client connected. Total connections: {len(manager.active_connections)}")
     try:
         while True:
-            await websocket.receive_text()
-    except WebSocketDisconnect:
+            # Keep connection alive by waiting for messages (or just ping)
+            try:
+                data = await websocket.receive_text()
+                # Echo back or ignore client messages
+            except WebSocketDisconnect:
+                break
+            except Exception as e:
+                logger.error(f"WebSocket error: {e}")
+                break
+    finally:
         manager.disconnect(websocket)
+        logger.info(f"WebSocket client disconnected. Remaining connections: {len(manager.active_connections)}")
 
 
 @app.post("/DnsRec")
@@ -122,9 +128,17 @@ async def clear_session_history():
     url_history = []
     return {"status": "cleared"}
 
+async def delete_screenshot_later(filepath: str):
+    await asyncio.sleep(30)
+    try:
+        if os.path.exists(filepath):
+            os.remove(filepath)
+    except Exception as e:
+        print(f"Failed to delete screenshot: {e}")
+
 
 @app.post("/analyze")
-async def analyze(req: AnalyzeRequest, request: Request):
+async def analyze(req: AnalyzeRequest, request: Request,background_tasks: BackgroundTasks):
     url = req.url.strip()
     if not url:
         raise HTTPException(status_code=400, detail="URL cannot be empty")
@@ -140,7 +154,7 @@ async def analyze(req: AnalyzeRequest, request: Request):
 
     logger.info(f"Starting scan [{scan_id}]: {url}")
 
-    # ── A: Call playwright microservice (HTTP, not docker run) ─────────────
+    # ── Call playwright microservice (HTTP, not docker run) ─────────────
     features       = None
     screenshot_url = "/static/placeholder.png"
     try:
@@ -187,7 +201,7 @@ async def analyze(req: AnalyzeRequest, request: Request):
         logger.error(f"Feature extraction failed: {e}")
         raise HTTPException(status_code=500, detail=f"Feature extraction failed: {str(e)}")
 
-    # ── B: ML prediction ───────────────────────────────────────────────────
+    # ── ML prediction ───────────────────────────────────────────────────
     try:
         numeric = {k: v for k, v in features.items() if k not in DROPPED_COLS}
         df      = pd.DataFrame([numeric])[feature_order]
@@ -196,14 +210,14 @@ async def analyze(req: AnalyzeRequest, request: Request):
         logger.error(f"Model prediction failed: {e}")
         raise HTTPException(status_code=500, detail=f"Prediction failed: {str(e)}")
 
-    # ── C: DNS (non-fatal) ─────────────────────────────────────────────────
+    # ──DNS (non-fatal) ─────────────────────────────────────────────────
     try:
         dns_report = await asyncio.to_thread(dns_rec, url)
     except Exception as e:
         logger.warning(f"DNS lookup failed (non-fatal): {e}")
         dns_report = {}
 
-    # ── D: Threat event (non-fatal) ────────────────────────────────────────
+    # ──Threat event (non-fatal) ────────────────────────────────────────
     try:
         ml_score = (
             result["probability"]
@@ -215,7 +229,7 @@ async def analyze(req: AnalyzeRequest, request: Request):
         logger.warning(f"build_threat_event failed (non-fatal): {e}")
         event = {}
 
-    # ── E: Final response ──────────────────────────────────────────────────
+    # ── Final response ──────────────────────────────────────────────────
     response = {
         **event,
         "prediction":   result["prediction"],
@@ -236,10 +250,23 @@ async def analyze(req: AnalyzeRequest, request: Request):
         "time":   datetime.now().strftime("%H:%M:%S"),
     }))
 
+
+
     logger.info(
         f"Scan complete [{scan_id}]: {result['prediction']} ({result['probability']:.2%})"
     )
+    if screenshot_url and "placeholder.png" not in screenshot_url:
+        # Grab just the filename
+        filename = os.path.basename(screenshot_url)
+        # Create the actual physical path where the file lives inside Docker
+        actual_file_path = os.path.join(BASE_DIR, "web_app", "screenshots", filename)
+        
+        # Tell the background task to delete it
+        background_tasks.add_task(delete_screenshot_later, actual_file_path)
+
     return response
+
+
 
 
 if __name__ == "__main__":
