@@ -1,11 +1,14 @@
 import joblib
 import pandas as pd
 import numpy as np
+from pathlib import Path
 
-# -------- load model artifacts once --------
-model        = joblib.load("Model/model1.pkl")
-explainer    = joblib.load("Model/explainer1.pkl")
-feature_order = joblib.load("Model/feature_order1.pkl")
+CURRENT_DIR = Path(__file__).resolve().parent
+MODEL_DIR = CURRENT_DIR / "Model"
+
+model = joblib.load(MODEL_DIR / "model1.pkl")
+explainer = joblib.load(MODEL_DIR / "explainer1.pkl")
+feature_order = joblib.load(MODEL_DIR / "feature_order1.pkl")
 
 def predict_url(features_df: pd.DataFrame) -> dict:
 

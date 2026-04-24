@@ -221,7 +221,7 @@ async function buildEarthTexture(geojson){
   const cv=document.createElement('canvas'); cv.width=W; cv.height=H;
   const ctx=cv.getContext('2d');
 
-  // ── Step 1: real equirectangular earth photo as base ─────────
+  // ──real equirectangular earth photo as base ─────────
   await new Promise(resolve=>{
     const img=new Image();
     img.crossOrigin='anonymous';
@@ -235,7 +235,7 @@ async function buildEarthTexture(geojson){
     img.src='https://unpkg.com/three-globe/example/img/earth-night.jpg';
   });
 
-  // ── Step 2: cyber grid ───────────────────────────────────────
+  // ──cyber grid ───────────────────────────────────────
   ctx.strokeStyle='rgba(234,7,3,0.07)'; ctx.lineWidth=0.8;
   for(let lon=-180;lon<=180;lon+=10){
     const x=(lon+180)/360*W;
@@ -254,7 +254,7 @@ async function buildEarthTexture(geojson){
     ctx.beginPath(); ctx.moveTo(0,y); ctx.lineTo(W,y); ctx.stroke();
   });
 
-  // ── Step 3: country borders from GeoJSON ─────────────────────
+  // ──country borders from GeoJSON ─────────────────────
   function drawFeature(feature){
     const geom=feature.geometry; if(!geom) return;
     const polys=geom.type==='Polygon'?[geom.coordinates]:geom.type==='MultiPolygon'?geom.coordinates:[];
@@ -274,7 +274,7 @@ async function buildEarthTexture(geojson){
   }
   geojson.features.forEach(f=>drawFeature(f));
 
-  // ── Step 4: continent labels ──────────────────────────────────
+  // ──continent labels ──────────────────────────────────
   const CONTINENT_LABELS=[
     {name:'NORTH AMERICA',lon:-100,lat:50},{name:'SOUTH AMERICA',lon:-60,lat:-15},
     {name:'EUROPE',lon:15,lat:52},{name:'AFRICA',lon:20,lat:5},

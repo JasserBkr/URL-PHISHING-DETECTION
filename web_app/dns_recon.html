@@ -94,7 +94,7 @@
         const ipEntries = Object.entries(data).filter(([key]) => ipRegex.test(key));
         const recordEntries = Object.entries(data).filter(([key]) => !ipRegex.test(key));
 
-        // 1. IP Infrastructure Table
+        //IP Infrastructure Table
         if (ipEntries.length > 0) {
             let ipHtml = `
                 <div class="bg-[#1a1919] border border-white/5 p-6 w-full max-w-5xl">
@@ -126,7 +126,7 @@
             container.insertAdjacentHTML('beforeend', ipHtml);
         }
 
-        // 2. Domain Records Table
+        //Domain Records Table
         if (recordEntries.length > 0) {
             let recordHtml = `
                 <div class="bg-[#1a1919] border border-white/5 p-6 w-full max-w-5xl">
@@ -160,7 +160,7 @@
     // Re-render when navigating back/forward
     window.addEventListener('pageshow', renderDNSTables);
 
-    // KEY FIX: re-render whenever script.js writes new dns_results to localStorage.
+    //  re-render whenever script.js writes new dns_results to localStorage.
     // The 'storage' event fires on all OTHER open pages when localStorage changes.
     window.addEventListener('storage', function(e) {
         if (e.key === 'dns_results') {
@@ -170,7 +170,6 @@
     });
 
     // Expose globally so script.js can trigger a refresh directly
-    // (storage event does NOT fire on the same page that wrote the value)
     window.refreshDnsRecon = function() {
         showUpdateBanner();
         renderDNSTables();

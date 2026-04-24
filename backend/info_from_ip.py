@@ -34,9 +34,10 @@ category={
     23:"IoT Targeted"
 }
 
-threat_map={}
+
 
 def check_db(ip,api_key,abuseIpDB_url):
+    
     parms={
         "ipAddress":ip,
         "maxAgeInDays":364,
@@ -107,6 +108,7 @@ def get_soa_record(domain):
         return "unknown"
 
 def dns_rec(url):
+    threat_map={}
     host=urlparse(url).hostname
     ip_pattern=r"^\d+\.\d+\.\d+\.\d+$"
 
